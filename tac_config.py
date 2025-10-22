@@ -1,8 +1,13 @@
 """
 Configuration constants for the TAC Executive Report Generator
+
+This file contains all user-configurable options for the TAC Executive Report Generator.
+Users can modify these settings to customize report appearance and chart types without 
+modifying the core code.
 """
 
 # Chart styling constants for Radware branding
+# this is needed for UI elements, specifically the header and footer
 RADWARE_COLORS = {
     'primary': '#003f7f',      # Radware blue
     'secondary': '#6cb2eb',    # Light blue
@@ -15,15 +20,215 @@ RADWARE_COLORS = {
     'background': '#ffffff',    # White background
 }
 
-# Color palette for charts (colorblind friendly)
-CHART_COLORS = [
-    '#003f7f', '#6cb2eb', '#ff6b35', '#28a745', '#ffc107',
-    '#dc3545', '#17a2b8', '#6f42c1', '#e83e8c', '#fd7e14',
-    '#20c997', '#6610f2', '#e91e63', '#795548', '#607d8b'
-]
+# ============================================================================
+# COLOR CONFIGURATION - USER CUSTOMIZABLE
+# ============================================================================
+# Users can easily customize chart colors by changing the color palettes below.
+# Colors can be specified as hex codes (#RRGGBB), RGB values, or named colors.
+
+# Color palette options - choose one by setting ACTIVE_COLOR_PALETTE
+COLOR_PALETTES = {
+    # Radware Corporate (default)
+    'radware_corporate': [
+        '#003f7f', '#6cb2eb', '#ff6b35', '#28a745', '#ffc107',
+        '#dc3545', '#17a2b8', '#6f42c1', '#e83e8c', '#fd7e14',
+        '#20c997', '#6610f2', '#e91e63', '#795548', '#607d8b'
+    ],
+    
+    # Professional Blue Theme
+    'professional_blue': [
+        '#1f4e79',  # Dark blue
+        '#2e75b6',  # Medium blue
+        '#5b9bd5',  # Standard blue
+        '#9fc5e8',  # Light blue
+        '#cfe2f3',  # Very light blue
+        '#003f7f',  # Radware blue (deep blue)
+        '#34495e',  # Slate blue/gray
+        '#6cb2eb',  # Soft blue
+        '#3a6ea5',  # Steel blue
+        '#b4c6e7'   # Pale blue
+    ],
+
+    # Modern Minimal
+    'modern_minimal': [
+        '#2c3e50', '#34495e', '#95a5a6', '#bdc3c7', '#ecf0f1',
+        '#e74c3c', '#e67e22', '#f39c12', '#27ae60', '#3498db'
+    ],
+    
+    # Vibrant Corporate
+    'vibrant_corporate': [
+        '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+        '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#f1c40f'
+    ],
+    
+    # High Contrast (accessibility friendly)
+    'high_contrast': [
+        '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
+        '#ffff00', '#ff00ff', '#00ffff', '#800000', '#008000'
+    ],
+    
+    # Colorblind Friendly (deuteranopia/protanopia safe)
+    'colorblind_friendly': [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+    ]
+}
+
+# Set the active color palette (change this to switch color schemes)
+ACTIVE_COLOR_PALETTE = 'professional_blue'  # Options: 'radware_corporate', 'professional_blue', 'modern_minimal', 'vibrant_corporate', 'high_contrast', 'colorblind_friendly'
+
+# Specific color assignments for chart elements (optional, if need to override automatic colors)
+CHART_COLOR_ASSIGNMENTS = {
+
+    # Monthly trends line/area chart colors
+
+    # Option 1: Radware blue theme
+    # 'trends_colors': {
+    #     'primary': '#003f7f',        # Main trend line color
+    #     'area_fill': 'rgba(0, 63, 127, 0.3)'  # Semi-transparent fill
+    # },
+
+    # Option 2: Custom green theme
+
+    # 'trends_colors': {
+    #     'primary': "#08532D",        # Custom main trend line color
+    #     'area_fill': 'rgba(0, 63, 127, 0.3)'  # Semi-transparent fill
+    # },
+
+    
+    # Severity colors (override automatic colors for severity levels)
+
+    # Severity colors option - Original vibrant colors
+
+    # 'severity_colors': {
+    #     '1 - Critical': '#dc3545',    # Red
+    #     '2 - High': '#ff6b35',        # Orange
+    #     '3 - Medium': '#ffc107',      # Yellow
+    #     '4 - Low': '#28a745',         # Green
+    # },
+
+    # Severity colors option - all Dark Blue
+
+    # 'severity_colors': {
+    #     '1 - Critical': '#003f7f',    # Dark Blue
+    #     '2 - High': '#003f7f',        # Dark Blue
+    #     '3 - Medium': '#003f7f',      # Dark Blue
+    #     '4 - Low': '#003f7f',         # Dark Blue
+    # },
+    
+    # Bug analysis specific colors
+    # 'bug_colors': {
+    #     'Bug Cases': '#dc3545',      # Red for bugs
+    #     'Non-Bug Cases': '#003f7f'   # Dark Blue for non-bugs
+    # },
+
+    # # Engineer assignment colors
+    # 'engineer_assignment_colors': {
+    #     'primary': '#003f7f'   # Dark Blue for engineer assignment bars
+    # },
+
+
+    
+    # Internal/External colors
+    # 'internal_external_colors': {
+    #     'Internal': '#003f7f',       # Radware blue for internal
+    #     'External': '#6cb2eb'        # Light blue for external
+    # },
+    
+
+}
 
 # Output format configuration
 OUTPUT_FORMATS = ['html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+
+# ============================================================================
+# CHART TYPE CONFIGURATION - USER CUSTOMIZABLE
+# ============================================================================
+# Users can easily change chart types here to customize report visualizations
+# without modifying any code. Simply change the values below to your preferred
+# chart type for each visualization.
+
+CHART_TYPES = {
+    # Monthly trends chart
+    # Options: 'line', 'bar', 'area'
+    # - 'line': Traditional line chart with trend line (good for time series)
+    # - 'bar': Bar chart showing discrete monthly values (easier to read exact values)
+    # - 'area': Area chart with filled region under line (emphasizes volume)
+    'monthly_trends': 'bar',
+    
+    # Distribution charts (for categorical data)
+    # Options: 'pie', 'donut', 'bar', 'horizontal_bar'
+    # - 'pie': Traditional pie chart (good for showing proportions)
+    # - 'donut': Pie chart with center hole (modern look, easier to read labels)
+    # - 'bar': Vertical bar chart (easier to compare exact values)
+    # - 'horizontal_bar': Horizontal bar chart (better for long category names)
+    'severity_distribution': 'pie',
+    'product_hierarchy': 'pie',
+    'bug_analysis': 'pie',
+    'internal_external': 'pie',
+    'queue_distribution': 'pie',
+
+    # Assignment charts (for ranking/comparison data)
+    # Options: 'bar', 'horizontal_bar'
+    # - 'bar': Vertical bars (good for rankings)
+    # - 'horizontal_bar': Horizontal bars (better for names/labels)
+    'engineer_assignment': 'horizontal_bar',
+}
+
+# Advanced chart styling options
+# Users can modify these to fine-tune chart appearance
+CHART_STYLES = {
+    'monthly_trends': {
+        'line': {
+            'mode': 'lines+markers',
+            'line_width': 3,
+            'marker_size': 8,
+            'show_trend': True  # Show trend line for line charts
+        },
+        'bar': {
+            'show_values': True,  # Show values on bars
+            'show_trend': False,  # No trend line for bar charts
+            'bar_width': 0.6
+        },
+        'area': {
+            'fill': 'tonexty',
+            'line_width': 2,
+            'show_trend': True
+        }
+    },
+    'distribution_charts': {
+        'pie': {
+            'hole': 0,  # 0 for full pie (no hole), 0.3+ for donut
+            'textinfo': 'label+value',  # Show labels and values
+            'textposition': 'outside'
+        },
+        'donut': {
+            'hole': 0.5,  # Larger hole for donut
+            'textinfo': 'label+value',
+            'textposition': 'outside'
+        },
+        'bar': {
+            'orientation': 'vertical',
+            'show_values': True
+        },
+        'horizontal_bar': {
+            'orientation': 'horizontal', 
+            'show_values': True
+        }
+    },
+    'assignment_charts': {
+        'bar': {
+            'orientation': 'vertical',
+            'show_values': True,
+            'sort_values': 'descending'  # 'ascending', 'descending', 'none'
+        },
+        'horizontal_bar': {
+            'orientation': 'horizontal',
+            'show_values': True,
+            'sort_values': 'descending'
+        }
+    }
+}
 
 # Chart configuration
 CHART_CONFIG = {

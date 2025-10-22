@@ -207,6 +207,9 @@ The generated reports include:
 
 V0.1.2 
     Added support for MIS generated csv reports
+    Added chart style control functionality to user, added to tac_config.py
+    Enhance visualization of pie charts/donuts types of charts
+    Removed Report Details section
 V0.1.1 Bugfixes adjustments
 V0.1.0 First push
 

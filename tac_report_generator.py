@@ -171,8 +171,8 @@ class TACReportGenerator:
             )
             
             # Engineer performance
-            charts['engineer_performance'] = self.visualizer.create_engineer_performance_chart(
-                analytics.get('engineer_performance', {})
+            charts['engineer_assignment'] = self.visualizer.create_engineer_assignment_chart(
+                analytics.get('engineer_assignment', {})
             )
             
             # Internal vs External
@@ -193,7 +193,7 @@ class TACReportGenerator:
             # Return empty charts dict to prevent complete failure
             return {key: '<div class="warning">Chart generation failed</div>' for key in [
                 'summary_stats', 'monthly_trends', 'severity_distribution', 'product_hierarchy',
-                'bug_analysis', 'engineer_performance', 'internal_external', 'queue_distribution'
+                'bug_analysis', 'engineer_assignment', 'internal_external', 'queue_distribution'
             ]}
     
     def _create_executive_summary(self, analytics: Dict[str, Any]) -> str:
@@ -367,7 +367,7 @@ class TACReportGenerator:
             <div class="section">
                 <h2>Engineer Case Distribution</h2>
                 <div class="chart-container">
-                    {charts['engineer_performance']}
+                    {charts['engineer_assignment']}
                 </div>
                 <p class="chart-description">
                     Case distribution by engineer provides insights into workload balance and 
@@ -397,19 +397,6 @@ class TACReportGenerator:
                     Queue distribution shows how cases are distributed across different support teams, 
                     enabling optimization of team structures and specialization areas.
                 </p>
-            </div>
-            
-            <!-- Data Summary -->
-            <div class="section">
-                <h2>Report Details</h2>
-                <div class="data-summary">
-                    <table class="summary-table">
-                        <tr><td><strong>Total Cases Analyzed:</strong></td><td>{format_number(total_cases)}</td></tr>
-                        <tr><td><strong>Source File:</strong></td><td>{file_analysis.get('file_size', 'Unknown')}</td></tr>
-                        <tr><td><strong>Columns Processed:</strong></td><td>{file_analysis.get('columns_found', 0)}</td></tr>
-                        <tr><td><strong>Date Range:</strong></td><td>{file_analysis.get('date_range', {}).get('days', 0)} days</td></tr>
-                    </table>
-                </div>
             </div>
         </div>
         

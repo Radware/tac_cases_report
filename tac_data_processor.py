@@ -343,7 +343,7 @@ class TACDataProcessor:
             'customer_analysis': self._get_customer_analysis(),
             'internal_vs_external': self._get_internal_external_analysis(),
             'queue_analysis': self._get_queue_analysis(),
-            'engineer_performance': self._get_engineer_performance(),
+            'engineer_assignment': self._get_engineer_assignment(),
             'response_times': self._get_response_time_analysis()
         }
         
@@ -577,7 +577,7 @@ class TACDataProcessor:
             'queue_counts': queue_counts
         }
     
-    def _get_engineer_performance(self) -> Dict[str, Any]:
+    def _get_engineer_assignment(self) -> Dict[str, Any]:
         """Analyze engineer performance metrics."""
         if 'assigned_account' not in self.column_mapping:
             return {'available': False, 'reason': 'No assigned account column found'}

@@ -15,8 +15,8 @@ from datetime import datetime
 from collections import Counter
 
 from tac_config import (
-    RADWARE_COLORS, CHART_COLORS, CHART_CONFIG, CHART_LAYOUT,
-    CHART_PLOTLYJS_MODE
+    RADWARE_COLORS, COLOR_PALETTES, ACTIVE_COLOR_PALETTE, CHART_COLOR_ASSIGNMENTS,
+    CHART_CONFIG, CHART_LAYOUT, CHART_PLOTLYJS_MODE
 )
 from tac_utils import format_number, calculate_percentage
 
@@ -29,9 +29,12 @@ class TACVisualizer:
     """
     
     def __init__(self):
-        """Initialize the visualizer with Radware styling."""
+        """Initialize the visualizer with configurable colors."""
         self.colors = RADWARE_COLORS
-        self.chart_colors = CHART_COLORS
+        
+        # Get active color palette
+        self.chart_colors = COLOR_PALETTES.get(ACTIVE_COLOR_PALETTE, COLOR_PALETTES['radware_corporate'])
+        self.color_assignments = CHART_COLOR_ASSIGNMENTS
         
         # Common layout settings
         self.common_layout = {
@@ -45,7 +48,7 @@ class TACVisualizer:
     
     def create_monthly_cases_chart(self, monthly_data: Dict[str, Any]) -> str:
         """
-        Create monthly case volume trend chart.
+        Create monthly case volume trend chart with configurable chart type.
         
         Args:
             monthly_data: Monthly trends data
@@ -58,7 +61,10 @@ class TACVisualizer:
                 monthly_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES, CHART_STYLES
+            
             monthly_counts = monthly_data['monthly_counts']
+            chart_type = CHART_TYPES.get('monthly_trends', 'line')
             
             # Sort by date
             sorted_months = sorted(monthly_counts.keys())
@@ -75,32 +81,98 @@ class TACVisualizer:
             
             fig = go.Figure()
             
-            # Add line chart
-            fig.add_trace(go.Scatter(
-                x=month_labels,
-                y=values,
-                mode='lines+markers',
-                name='Cases Created',
-                line=dict(color=self.colors['primary'], width=3),
-                marker=dict(size=8, color=self.colors['primary']),
-                hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
-            ))
-            
-            # Add trend line if more than 2 data points
-            if len(values) > 2:
-                # Simple linear trend
-                x_numeric = list(range(len(values)))
-                z = self._calculate_trend(x_numeric, values)
-                trend_y = [z[0] + z[1] * x for x in x_numeric]
+            # Create chart based on configured type
+            if chart_type == 'bar':
+                style = CHART_STYLES.get('monthly_trends', {}).get('bar', {})
+                bar_width = style.get('bar_width', 0.6)
+                show_values = style.get('show_values', True)
+                
+                # Use configurable trend colors
+                trend_colors = self.color_assignments.get('trends_colors', {})
+                bar_color = trend_colors.get('primary', self.chart_colors[0])
+                
+                fig.add_trace(go.Bar(
+                    x=month_labels,
+                    y=values,
+                    name='Cases Created',
+                    marker=dict(color=bar_color),
+                    width=bar_width,
+                    text=values if show_values else None,
+                    textposition='outside' if show_values else None,
+                    hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
+                ))
+                
+            elif chart_type == 'area':
+                style = CHART_STYLES.get('monthly_trends', {}).get('area', {})
+                line_width = style.get('line_width', 2)
+                show_trend = style.get('show_trend', True)
+                
+                # Use configurable trend colors
+                trend_colors = self.color_assignments.get('trends_colors', {})
+                line_color = trend_colors.get('primary', self.chart_colors[0])
+                fill_color = trend_colors.get('area_fill', f'rgba({int(line_color[1:3], 16)}, {int(line_color[3:5], 16)}, {int(line_color[5:7], 16)}, 0.3)')
                 
                 fig.add_trace(go.Scatter(
                     x=month_labels,
-                    y=trend_y,
-                    mode='lines',
-                    name='Trend',
-                    line=dict(color=self.colors['accent'], width=2, dash='dash'),
-                    hovertemplate='Trend: %{y:.1f}<extra></extra>'
+                    y=values,
+                    mode='lines+markers',
+                    name='Cases Created',
+                    line=dict(color=line_color, width=line_width),
+                    marker=dict(size=6, color=line_color),
+                    fill='tozeroy',
+                    fillcolor=fill_color,
+                    hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
                 ))
+                
+                # Add trend line if enabled and more than 2 data points
+                if show_trend and len(values) > 2:
+                    x_numeric = list(range(len(values)))
+                    z = self._calculate_trend(x_numeric, values)
+                    trend_y = [z[0] + z[1] * x for x in x_numeric]
+                    
+                    fig.add_trace(go.Scatter(
+                        x=month_labels,
+                        y=trend_y,
+                        mode='lines',
+                        name='Trend',
+                        line=dict(color=self.colors['accent'], width=2, dash='dash'),
+                        hovertemplate='Trend: %{y:.1f}<extra></extra>'
+                    ))
+                    
+            else:  # Default to line chart
+                style = CHART_STYLES.get('monthly_trends', {}).get('line', {})
+                line_width = style.get('line_width', 3)
+                marker_size = style.get('marker_size', 8)
+                show_trend = style.get('show_trend', True)
+                
+                # Use configurable trend colors
+                trend_colors = self.color_assignments.get('trends_colors', {})
+                line_color = trend_colors.get('primary', self.chart_colors[0])
+                
+                fig.add_trace(go.Scatter(
+                    x=month_labels,
+                    y=values,
+                    mode='lines+markers',
+                    name='Cases Created',
+                    line=dict(color=line_color, width=line_width),
+                    marker=dict(size=marker_size, color=line_color),
+                    hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
+                ))
+                
+                # Add trend line if enabled and more than 2 data points
+                if show_trend and len(values) > 2:
+                    x_numeric = list(range(len(values)))
+                    z = self._calculate_trend(x_numeric, values)
+                    trend_y = [z[0] + z[1] * x for x in x_numeric]
+                    
+                    fig.add_trace(go.Scatter(
+                        x=month_labels,
+                        y=trend_y,
+                        mode='lines',
+                        name='Trend',
+                        line=dict(color=self.colors['accent'], width=2, dash='dash'),
+                        hovertemplate='Trend: %{y:.1f}<extra></extra>'
+                    ))
             
             fig.update_layout(
                 title='TAC Cases Created by Month',
@@ -120,9 +192,179 @@ class TACVisualizer:
             logger.error(f"Failed to create monthly cases chart: {e}")
             return self._create_error_message("Monthly Cases Chart")
     
+    def _create_distribution_chart(self, labels: list, values: list, colors: list, 
+                                  chart_type: str, title: str, div_id: str) -> go.Figure:
+        """
+        Create a distribution chart with configurable type.
+        
+        Args:
+            labels: Data labels
+            values: Data values  
+            colors: Color list for data points
+            chart_type: Type of chart ('pie', 'donut', 'bar', 'horizontal_bar')
+            title: Chart title
+            div_id: HTML div ID for the chart
+            
+        Returns:
+            Plotly Figure object
+        """
+        from tac_config import CHART_STYLES
+        
+        fig = go.Figure()
+        
+        if chart_type in ['pie', 'donut']:
+            style = CHART_STYLES.get('distribution_charts', {}).get(chart_type, {})
+            hole_size = style.get('hole', 0.3 if chart_type == 'pie' else 0.5)
+            textinfo = style.get('textinfo', 'label+value')
+            textposition = style.get('textposition', 'outside')
+            
+            # Create pie/donut with enhanced styling
+            fig.add_trace(go.Pie(
+                labels=labels,
+                values=values,
+                hole=hole_size,
+                marker=dict(
+                    colors=colors,
+                    line=dict(
+                        color='white',  # White borders between slices
+                        width=3         # Thick borders for clean separation
+                    )
+                ),
+                textinfo=textinfo,
+                textposition=textposition,
+                textfont=dict(
+                    size=14,
+                    family='Arial, sans-serif',
+                    color='#2c3e50'  # Dark color for better readability
+                ),
+                insidetextfont=dict(
+                    size=16,
+                    family='Arial, sans-serif', 
+                    color='white'  # White text inside slices
+                ),
+                outsidetextfont=dict(
+                    size=14,
+                    family='Arial, sans-serif',
+                    color='#2c3e50'  # Dark text outside
+                ),
+                pull=[0.01] * len(labels),  # Slightly separate all slices for 3D effect
+                domain=dict(x=[0.05, 0.95], y=[0.1, 0.9]),  # Larger pie chart with minimal margins
+                hovertemplate='<b>%{label}</b><br>' +
+                             'Cases: <b>%{value}</b><br>' +
+                             'Percentage: <b>%{percent}</b><br>' +
+                             '<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor='rgba(255,255,255,0.95)',
+                    bordercolor='#2c3e50',
+                    font=dict(
+                        color='#2c3e50',
+                        size=13,
+                        family='Arial, sans-serif'
+                    )
+                )
+            ))
+            
+        elif chart_type == 'bar':
+            style = CHART_STYLES.get('distribution_charts', {}).get('bar', {})
+            show_values = style.get('show_values', True)
+            
+            fig.add_trace(go.Bar(
+                x=labels,
+                y=values,
+                marker_color=colors,
+                text=values if show_values else None,
+                textposition='outside' if show_values else None,
+                hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
+            ))
+            
+            fig.update_layout(
+                xaxis_title='Category',
+                yaxis_title='Number of Cases',
+                yaxis=dict(rangemode='tozero')
+            )
+            
+        elif chart_type == 'horizontal_bar':
+            style = CHART_STYLES.get('distribution_charts', {}).get('horizontal_bar', {})
+            show_values = style.get('show_values', True)
+            
+            fig.add_trace(go.Bar(
+                x=values,
+                y=labels,
+                orientation='h',
+                marker_color=colors,
+                text=values if show_values else None,
+                textposition='outside' if show_values else None,
+                hovertemplate='<b>%{y}</b><br>Cases: %{x}<extra></extra>'
+            ))
+            
+            fig.update_layout(
+                xaxis_title='Number of Cases',
+                yaxis_title='Category',
+                xaxis=dict(rangemode='tozero')
+            )
+        
+        # Enhanced layout configuration
+        if chart_type in ['pie', 'donut']:
+            # Special layout for pie/donut charts
+            enhanced_layout = {
+                'title': dict(
+                    text=title,
+                    font=dict(
+                        size=20,
+                        family='Arial Black, sans-serif',
+                        color='#2c3e50'
+                    ),
+                    x=0.5,  # Center the title
+                    y=0.95
+                ),
+                'width': 900,
+                'height': 600,
+                'showlegend': True,
+                'legend': dict(
+                    orientation='v',  # Vertical legend for pie charts
+                    yanchor='middle',
+                    y=0.5,
+                    xanchor='left',
+                    x=1.02,
+                    bgcolor='rgba(255,255,255,0.8)',
+                    bordercolor='#e1e8ed',
+                    borderwidth=1,
+                    font=dict(
+                        size=12,
+                        family='Arial, sans-serif',
+                        color='#2c3e50'
+                    )
+                ),
+                'plot_bgcolor': 'white',
+                'paper_bgcolor': 'white',
+                'margin': dict(l=50, r=150, t=100, b=50),  # Increased margins for better spacing
+                'annotations': [
+                    dict(
+                        text=f'Total Cases: {sum(values)}',
+                        x=0.5, y=0.05,  # Moved annotation higher to avoid overlap
+                        xref='paper', yref='paper',
+                        showarrow=False,
+                        font=dict(
+                            size=14,
+                            family='Arial, sans-serif',
+                            color='#7f8c8d'
+                        )
+                    )
+                ]
+            }
+            fig.update_layout(**enhanced_layout)
+        else:
+            # Regular layout for other chart types
+            fig.update_layout(
+                title=title,
+                **self.common_layout
+            )
+        
+        return fig
+
     def create_severity_distribution_chart(self, severity_data: Dict[str, Any]) -> str:
         """
-        Create severity distribution pie chart.
+        Create severity distribution chart with configurable chart type.
         
         Args:
             severity_data: Severity analysis data
@@ -135,7 +377,10 @@ class TACVisualizer:
                 severity_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES
+            
             counts = severity_data['counts']
+            chart_type = CHART_TYPES.get('severity_distribution', 'pie')
             
             # Sort by severity order (Critical, High, Medium, Low)
             severity_order = ['1 - Critical', '2 - High', '3 - Medium', '4 - Low']
@@ -153,30 +398,19 @@ class TACVisualizer:
                     sorted_severities.append(severity)
                     sorted_values.append(count)
             
-            # Color mapping for severities
-            severity_colors = {
-                '1 - Critical': self.colors['danger'],
-                '2 - High': self.colors['warning'],
-                '3 - Medium': self.colors['secondary'],
-                '4 - Low': self.colors['success']
-            }
+            # Color mapping for severities (use configurable colors)
+            severity_colors = self.color_assignments.get('severity_colors', {})
             
             colors = [severity_colors.get(sev, self.chart_colors[i % len(self.chart_colors)]) 
                      for i, sev in enumerate(sorted_severities)]
             
-            fig = go.Figure(data=[go.Pie(
+            fig = self._create_distribution_chart(
                 labels=sorted_severities,
                 values=sorted_values,
-                hole=0.3,
-                marker_colors=colors,
-                textinfo='label+value',  # Show label and count instead of percentage
-                textposition='outside',
-                hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
-            )])
-            
-            fig.update_layout(
+                colors=colors,
+                chart_type=chart_type,
                 title='Case Distribution by Severity',
-                **self.common_layout
+                div_id='severity_distribution_chart'
             )
             
             return fig.to_html(
@@ -191,7 +425,7 @@ class TACVisualizer:
     
     def create_product_hierarchy_chart(self, product_data: Dict[str, Any]) -> str:
         """
-        Create product hierarchy distribution chart.
+        Create product hierarchy distribution chart with configurable chart type.
         
         Args:
             product_data: Product analysis data
@@ -204,7 +438,10 @@ class TACVisualizer:
                 product_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES
+            
             product_counts = product_data['product_counts']
+            chart_type = CHART_TYPES.get('product_hierarchy', 'pie')
             
             # Sort by count (descending)
             sorted_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)
@@ -216,23 +453,21 @@ class TACVisualizer:
                 products = products[:10]
                 values = values[:10]
             
-            fig = go.Figure(data=[go.Bar(
-                x=values,
-                y=products,
-                orientation='h',
-                marker_color=self.colors['primary'],
-                hovertemplate='<b>%{y}</b><br>Cases: %{x}<extra></extra>'
-            )])
+            # Generate colors
+            colors = [self.chart_colors[i % len(self.chart_colors)] for i in range(len(products))]
             
-            fig.update_layout(
+            fig = self._create_distribution_chart(
+                labels=products,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
                 title='Cases by Product Hierarchy',
-                xaxis_title='Number of Cases',
-                yaxis_title='Product',
-                **self.common_layout
+                div_id='product_hierarchy_chart'
             )
             
-            # Reverse y-axis to show highest at top
-            fig.update_yaxes(autorange="reversed")
+            # For horizontal bar charts, reverse y-axis to show highest at top
+            if chart_type == 'horizontal_bar':
+                fig.update_yaxes(autorange="reversed")
             
             return fig.to_html(
                 include_plotlyjs=CHART_PLOTLYJS_MODE,
@@ -246,124 +481,200 @@ class TACVisualizer:
     
     def create_bug_analysis_chart(self, bug_data: Dict[str, Any]) -> str:
         """
-        Create bug vs non-bug analysis chart.
+        Create bug vs non-bug analysis chart with configurable chart type.
+        Shows both the bug vs non-bug breakdown and detailed bug types.
         
         Args:
             bug_data: Bug analysis data
             
         Returns:
-            HTML string with chart
+            HTML string with chart(s)
         """
         if not bug_data.get('available') or not bug_data.get('bug_vs_non_bug'):
             return self._create_not_available_message("Bug Analysis", 
                 bug_data.get('reason', 'No data available'))
-        
+
         try:
+            from tac_config import CHART_TYPES
+            
             bug_vs_non_bug = bug_data['bug_vs_non_bug']
+            bug_types = bug_data.get('bug_types', {})
+            chart_type = CHART_TYPES.get('bug_analysis', 'pie')
             
-            # Create subplot with pie chart and bug types
-            fig = make_subplots(
-                rows=1, cols=2,
-                subplot_titles=('Bug vs Non-Bug Cases', 'Bug Types Distribution'),
-                specs=[[{'type': 'pie'}, {'type': 'pie'}]]
+            charts_html = ""
+            
+            # Chart 1: Bug vs Non-Bug Analysis
+            labels = list(bug_vs_non_bug.keys())
+            values = list(bug_vs_non_bug.values())
+            
+            # Use configurable bug colors
+            bug_colors = self.color_assignments.get('bug_colors', {})
+            colors = [bug_colors.get(label, self.chart_colors[i % len(self.chart_colors)]) 
+                     for i, label in enumerate(labels)]
+            
+            fig1 = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Bug vs Non-Bug Cases',
+                div_id='bug_analysis_main_chart'
             )
             
-            # Bug vs Non-Bug pie chart
-            fig.add_trace(
-                go.Pie(
-                    labels=list(bug_vs_non_bug.keys()),
-                    values=list(bug_vs_non_bug.values()),
-                    hole=0.3,
-                    marker_colors=[self.colors['danger'], self.colors['success']],
-                    textinfo='label+value',  # Show label and count instead of percentage
-                    hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
-                ),
-                row=1, col=1
-            )
-            
-            # Bug types distribution
-            if bug_data.get('bug_types'):
-                bug_types = bug_data['bug_types']
-                fig.add_trace(
-                    go.Pie(
-                        labels=list(bug_types.keys()),
-                        values=list(bug_types.values()),
-                        hole=0.3,
-                        marker_colors=self.chart_colors[:len(bug_types)],
-                        textinfo='label+value',  # Show label and count instead of percentage
-                        hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
-                    ),
-                    row=1, col=2
-                )
-            
-            fig.update_layout(
-                title='Bug Analysis Overview',
-                **self.common_layout
-            )
-            
-            return fig.to_html(
+            charts_html += fig1.to_html(
                 include_plotlyjs=CHART_PLOTLYJS_MODE,
-                div_id="bug_analysis_chart",
+                div_id="bug_analysis_main_chart",
                 config=CHART_CONFIG
             )
+            
+            # Chart 2: Bug Types Breakdown (if there are bugs)
+            if bug_types and len(bug_types) > 0:
+                bug_labels = list(bug_types.keys())
+                bug_values = list(bug_types.values())
+                bug_colors = self.chart_colors[:len(bug_labels)]
+                
+                fig2 = self._create_distribution_chart(
+                    labels=bug_labels,
+                    values=bug_values,
+                    colors=bug_colors,
+                    chart_type=chart_type,
+                    title='Bug Types Breakdown',
+                    div_id='bug_types_chart'
+                )
+                
+                charts_html += "<br><br>" + fig2.to_html(
+                    include_plotlyjs=False,  # Don't include plotly.js again
+                    div_id="bug_types_chart",
+                    config=CHART_CONFIG
+                )
+            
+            return charts_html
             
         except Exception as e:
             logger.error(f"Failed to create bug analysis chart: {e}")
             return self._create_error_message("Bug Analysis Chart")
     
-    def create_engineer_performance_chart(self, engineer_data: Dict[str, Any]) -> str:
+    def _create_assignment_chart(self, labels: list, values: list, colors: list,
+                                chart_type: str, title: str, div_id: str) -> go.Figure:
         """
-        Create engineer performance chart.
+        Create an assignment chart with configurable type.
         
         Args:
-            engineer_data: Engineer performance data
+            labels: Data labels (e.g., engineer names)
+            values: Data values (e.g., case counts)
+            colors: Color list for data points
+            chart_type: Type of chart ('bar', 'horizontal_bar')
+            title: Chart title
+            div_id: HTML div ID for the chart
+            
+        Returns:
+            Plotly Figure object
+        """
+        from tac_config import CHART_STYLES
+        
+        fig = go.Figure()
+        
+        if chart_type == 'horizontal_bar':
+            style = CHART_STYLES.get('assignment_charts', {}).get('horizontal_bar', {})
+            show_values = style.get('show_values', True)
+            
+            fig.add_trace(go.Bar(
+                x=values,
+                y=labels,
+                orientation='h',
+                marker_color=colors,
+                text=values if show_values else None,
+                textposition='outside' if show_values else None,
+                hovertemplate='<b>%{y}</b><br>Cases: %{x}<extra></extra>'
+            ))
+            
+            fig.update_layout(
+                xaxis_title='Number of Cases',
+                yaxis_title='Engineer',
+                xaxis=dict(rangemode='tozero')
+            )
+            
+            # Reverse y-axis to show highest at top
+            fig.update_yaxes(autorange="reversed")
+            
+        else:  # Default to vertical bar
+            style = CHART_STYLES.get('assignment_charts', {}).get('bar', {})
+            show_values = style.get('show_values', True)
+            
+            fig.add_trace(go.Bar(
+                x=labels,
+                y=values,
+                marker_color=colors,
+                text=values if show_values else None,
+                textposition='outside' if show_values else None,
+                hovertemplate='<b>%{x}</b><br>Cases: %{y}<extra></extra>'
+            ))
+            
+            fig.update_layout(
+                xaxis_title='Engineer',
+                yaxis_title='Number of Cases',
+                yaxis=dict(rangemode='tozero')
+            )
+        
+        fig.update_layout(
+            title=title,
+            **self.common_layout
+        )
+        
+        return fig
+
+    def create_engineer_assignment_chart(self, engineer_data: Dict[str, Any]) -> str:
+        """
+        Create engineer case assignment chart with configurable chart type.
+        
+        Args:
+            engineer_data: Engineer assignment data
             
         Returns:
             HTML string with chart
         """
         if not engineer_data.get('available') or not engineer_data.get('case_counts'):
-            return self._create_not_available_message("Engineer Performance", 
+            return self._create_not_available_message("Engineer Case Assignment", 
                 engineer_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES
+            
             case_counts = engineer_data['case_counts']
+            chart_type = CHART_TYPES.get('engineer_assignment', 'horizontal_bar')
             
             # Sort by case count (descending) and take top 15
             sorted_engineers = sorted(case_counts.items(), key=lambda x: x[1], reverse=True)[:15]
             engineers = [item[0] for item in sorted_engineers]
             values = [item[1] for item in sorted_engineers]
             
-            fig = go.Figure(data=[go.Bar(
-                x=values,
-                y=engineers,
-                orientation='h',
-                marker_color=self.colors['secondary'],
-                hovertemplate='<b>%{y}</b><br>Cases: %{x}<extra></extra>'
-            )])
+            # Use configurable engineer assignment colors
+            assignment_colors = self.color_assignments.get('engineer_assignment_colors', {})
+            bar_color = assignment_colors.get('primary', self.chart_colors[0])  # Use first color from active palette as fallback
+            colors = [bar_color] * len(engineers)
             
-            fig.update_layout(
+            fig = self._create_assignment_chart(
+                labels=engineers,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
                 title='Cases by Assigned Engineer (Top 15)',
-                xaxis_title='Number of Cases',
-                yaxis_title='Engineer',
-                **self.common_layout
+                div_id='engineer_assignment_chart'
             )
-            
-            # Reverse y-axis to show highest at top
-            fig.update_yaxes(autorange="reversed")
             
             return fig.to_html(
                 include_plotlyjs=CHART_PLOTLYJS_MODE,
-                div_id="engineer_performance_chart",
+                div_id="engineer_assignment_chart",
                 config=CHART_CONFIG
             )
             
         except Exception as e:
-            logger.error(f"Failed to create engineer performance chart: {e}")
-            return self._create_error_message("Engineer Performance Chart")
+            logger.error(f"Failed to create engineer assignment chart: {e}")
+            return self._create_error_message("Engineer Assignment Chart")
     
     def create_internal_external_chart(self, internal_data: Dict[str, Any]) -> str:
         """
-        Create internal vs external cases chart.
+        Create internal vs external cases chart with configurable chart type.
         
         Args:
             internal_data: Internal vs external analysis data
@@ -376,7 +687,10 @@ class TACVisualizer:
                 internal_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES
+            
             breakdown = internal_data['breakdown']
+            chart_type = CHART_TYPES.get('internal_external', 'pie')
             
             # Normalize the labels
             normalized_breakdown = {}
@@ -386,19 +700,21 @@ class TACVisualizer:
                 else:
                     normalized_breakdown['External'] = value
             
-            fig = go.Figure(data=[go.Pie(
-                labels=list(normalized_breakdown.keys()),
-                values=list(normalized_breakdown.values()),
-                hole=0.3,
-                marker_colors=[self.colors['warning'], self.colors['primary']],
-                textinfo='label+value',  # Show label and count instead of percentage
-                textposition='outside',
-                hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
-            )])
+            labels = list(normalized_breakdown.keys())
+            values = list(normalized_breakdown.values())
             
-            fig.update_layout(
+            # Use configurable internal/external colors
+            ie_colors = self.color_assignments.get('internal_external_colors', {})
+            colors = [ie_colors.get(label, self.chart_colors[i % len(self.chart_colors)]) 
+                     for i, label in enumerate(labels)]
+            
+            fig = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
                 title='Internal vs External Cases',
-                **self.common_layout
+                div_id='internal_external_chart'
             )
             
             return fig.to_html(
@@ -413,7 +729,7 @@ class TACVisualizer:
     
     def create_queue_distribution_chart(self, queue_data: Dict[str, Any]) -> str:
         """
-        Create queue distribution chart.
+        Create queue distribution chart with configurable chart type.
         
         Args:
             queue_data: Queue analysis data
@@ -426,21 +742,22 @@ class TACVisualizer:
                 queue_data.get('reason', 'No data available'))
         
         try:
+            from tac_config import CHART_TYPES
+            
             queue_counts = queue_data['queue_counts']
+            chart_type = CHART_TYPES.get('queue_distribution', 'pie')
             
-            fig = go.Figure(data=[go.Pie(
-                labels=list(queue_counts.keys()),
-                values=list(queue_counts.values()),
-                hole=0.3,
-                marker_colors=self.chart_colors[:len(queue_counts)],
-                textinfo='label+value',  # Show label and count instead of percentage
-                textposition='outside',
-                hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
-            )])
+            labels = list(queue_counts.keys())
+            values = list(queue_counts.values())
+            colors = self.chart_colors[:len(queue_counts)]
             
-            fig.update_layout(
+            fig = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
                 title='Cases by Queue',
-                **self.common_layout
+                div_id='queue_distribution_chart'
             )
             
             return fig.to_html(
