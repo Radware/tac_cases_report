@@ -212,9 +212,11 @@ class TACReportGenerator:
             date_range = summary.get('date_range', {})
             cases_per_month = summary.get('cases_per_month', 0)
             
-            # Bug analysis
+            # Bug analysis - get total count instead of percentage
             bug_data = analytics.get('bug_analysis', {})
-            bug_percentage = bug_data.get('bug_percentage', 0)
+            bug_total = 0
+            if bug_data.get('available') and bug_data.get('bug_vs_non_bug'):
+                bug_total = bug_data['bug_vs_non_bug'].get('Bug Cases', 0)
             
             # Severity analysis
             severity_data = analytics.get('severity_analysis', {})
@@ -222,10 +224,6 @@ class TACReportGenerator:
             if severity_data.get('available'):
                 counts = severity_data.get('counts', {})
                 high_priority_cases = counts.get('1 - Critical', 0) + counts.get('2 - High', 0)
-            
-            # Response time analysis
-            response_data = analytics.get('response_times', {})
-            avg_response_days = response_data.get('avg_response_days', 0) if response_data.get('available') else 0
             
             # Date range formatting
             date_start = "Unknown"
@@ -247,9 +245,8 @@ class TACReportGenerator:
                     <h3>Key Findings:</h3>
                     <ul>
                         <li><strong>Case Volume:</strong> {format_number(total_cases)} total cases processed</li>
-                        <li><strong>Bug Impact:</strong> {bug_percentage}% of cases were related to product bugs</li>
+                        <li><strong>Bug Impact:</strong> {bug_total} cases were related to product bugs</li>
                         <li><strong>High Priority Cases:</strong> {format_number(high_priority_cases)} critical and high severity cases</li>
-                        {'<li><strong>Response Time:</strong> Average response time of ' + str(avg_response_days) + ' days</li>' if avg_response_days > 0 else ''}
                     </ul>
                     
                     <p>The analysis includes comprehensive breakdowns by severity, product hierarchy, 

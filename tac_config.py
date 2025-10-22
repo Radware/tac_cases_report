@@ -23,7 +23,7 @@ CHART_COLORS = [
 ]
 
 # Output format configuration
-OUTPUT_FORMATS = ['html', 'pdf']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+OUTPUT_FORMATS = ['html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
 
 # Chart configuration
 CHART_CONFIG = {
@@ -147,10 +147,10 @@ body {
     border-bottom: none;
 }
 
-/* Statistics Cards */
+# Statistics Cards */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     margin: 30px 0;
 }

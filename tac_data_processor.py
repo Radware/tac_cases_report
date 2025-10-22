@@ -118,18 +118,14 @@ class TACDataProcessor:
                 lines = f.readlines()
             
             # Check if first line is a title (common in exported files)
+            skip_rows = 0
             if len(lines) > 1:
                 first_line = lines[0].strip().strip('"')
-                second_line = lines[1].strip()
                 
                 # If first line doesn't look like headers but second does, skip first
                 if (',' not in first_line or 
                     first_line.lower() in ['open cases all', 'all cases', 'case report']):
                     skip_rows = 1
-                else:
-                    skip_rows = 0
-            else:
-                skip_rows = 0
             
             # Load with pandas for better handling of mixed data types
             self.data = pd.read_csv(
@@ -138,6 +134,19 @@ class TACDataProcessor:
                 skiprows=skip_rows,
                 low_memory=False
             )
+            
+            # Remove any footer rows (like "Record Count: 18")
+            # Filter out rows where the first column contains "Record Count" or similar
+            if len(self.data) > 0:
+                first_col = self.data.columns[0]
+                # Remove rows where first column contains record count or is not a valid case reference
+                mask = ~self.data[first_col].astype(str).str.contains(
+                    r'Record Count|Total|Summary|^$', 
+                    case=False, 
+                    na=False, 
+                    regex=True
+                )
+                self.data = self.data[mask].copy()
             
             logger.info(f"Loaded CSV file with {len(self.data)} rows and {len(self.data.columns)} columns")
             
@@ -148,19 +157,37 @@ class TACDataProcessor:
     def _load_excel_file(self):
         """Load Excel file."""
         try:
-            # Try to read Excel file
-            self.data = pd.read_excel(self.file_path, sheet_name=0)
+            # First, check the structure of the Excel file
+            temp_df = pd.read_excel(self.file_path, sheet_name=0, nrows=3)
             
-            # Check if first row is a title
+            # Check if first row is a title and second row contains headers
+            skip_rows = 0
+            if len(temp_df) >= 2:
+                # Check if the column names look like "Unnamed" (indicating first row might be title)
+                if any('unnamed' in str(col).lower() for col in temp_df.columns):
+                    # Check if first row contains actual headers
+                    first_row = temp_df.iloc[0].fillna('').astype(str)
+                    if any(header in first_row.str.lower().tolist() for header in ['reference', 'subject', 'status', 'date']):
+                        # First row contains headers, skip the title row
+                        skip_rows = 1
+            
+            # Load the Excel file with proper headers
+            if skip_rows > 0:
+                self.data = pd.read_excel(self.file_path, sheet_name=0, skiprows=skip_rows)
+            else:
+                self.data = pd.read_excel(self.file_path, sheet_name=0)
+            
+            # Remove any footer rows (like "Record Count: 18")
             if len(self.data) > 0:
-                first_row_vals = self.data.iloc[0].astype(str).tolist()
-                if any('case' in val.lower() for val in first_row_vals if val and val != 'nan'):
-                    # First row might be a title, check if second row has more columns
-                    if len(self.data) > 1:
-                        second_row_vals = self.data.iloc[1].astype(str).tolist()
-                        if len([v for v in second_row_vals if v and v != 'nan']) > len([v for v in first_row_vals if v and v != 'nan']):
-                            # Skip the first row and re-read
-                            self.data = pd.read_excel(self.file_path, sheet_name=0, skiprows=1)
+                first_col = self.data.columns[0]
+                # Remove rows where first column contains record count or is not a valid case reference
+                mask = ~self.data[first_col].astype(str).str.contains(
+                    r'Record Count|Total|Summary|^$', 
+                    case=False, 
+                    na=False, 
+                    regex=True
+                )
+                self.data = self.data[mask].copy()
             
             logger.info(f"Loaded Excel file with {len(self.data)} rows and {len(self.data.columns)} columns")
             
@@ -471,11 +498,15 @@ class TACDataProcessor:
         if not bug_value:
             return None
         
-        # Common bug prefixes
-        prefixes = ['AL', 'CYCON', 'BUG', 'DEF']
-        for prefix in prefixes:
-            if bug_value.upper().startswith(prefix):
-                return prefix
+        # Map bug prefixes to product names
+        if bug_value.upper().startswith('AL-'):
+            return 'Alteon'
+        elif bug_value.upper().startswith('CYCON-'):
+            return 'CyberController'
+        elif bug_value.upper().startswith('DP-'):
+            return 'DefensePro'
+        elif any(prefix in bug_value.upper() for prefix in ['BUG-', 'DEF-']):
+            return 'General'
         
         return 'Other'
     

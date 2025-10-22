@@ -106,6 +106,7 @@ class TACVisualizer:
                 title='TAC Cases Created by Month',
                 xaxis_title='Month',
                 yaxis_title='Number of Cases',
+                yaxis=dict(rangemode='tozero'),  # Start y-axis from 0
                 **self.common_layout
             )
             
@@ -168,7 +169,7 @@ class TACVisualizer:
                 values=sorted_values,
                 hole=0.3,
                 marker_colors=colors,
-                textinfo='label+percent',
+                textinfo='label+value',  # Show label and count instead of percentage
                 textposition='outside',
                 hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
             )])
@@ -274,7 +275,7 @@ class TACVisualizer:
                     values=list(bug_vs_non_bug.values()),
                     hole=0.3,
                     marker_colors=[self.colors['danger'], self.colors['success']],
-                    textinfo='label+percent',
+                    textinfo='label+value',  # Show label and count instead of percentage
                     hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
                 ),
                 row=1, col=1
@@ -289,7 +290,7 @@ class TACVisualizer:
                         values=list(bug_types.values()),
                         hole=0.3,
                         marker_colors=self.chart_colors[:len(bug_types)],
-                        textinfo='label+percent',
+                        textinfo='label+value',  # Show label and count instead of percentage
                         hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
                     ),
                     row=1, col=2
@@ -390,7 +391,7 @@ class TACVisualizer:
                 values=list(normalized_breakdown.values()),
                 hole=0.3,
                 marker_colors=[self.colors['warning'], self.colors['primary']],
-                textinfo='label+percent',
+                textinfo='label+value',  # Show label and count instead of percentage
                 textposition='outside',
                 hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
             )])
@@ -432,7 +433,7 @@ class TACVisualizer:
                 values=list(queue_counts.values()),
                 hole=0.3,
                 marker_colors=self.chart_colors[:len(queue_counts)],
-                textinfo='label+percent',
+                textinfo='label+value',  # Show label and count instead of percentage
                 textposition='outside',
                 hovertemplate='<b>%{label}</b><br>Cases: %{value}<br>Percentage: %{percent}<extra></extra>'
             )])
@@ -467,15 +468,12 @@ class TACVisualizer:
             
             total_cases = summary.get('total_cases', 0)
             cases_per_month = summary.get('cases_per_month', 0)
-            date_range = summary.get('date_range', {})
             
-            # Bug analysis
+            # Bug analysis - get total count instead of percentage
             bug_data = analytics.get('bug_analysis', {})
-            bug_percentage = bug_data.get('bug_percentage', 0)
-            
-            # Response time
-            response_data = analytics.get('response_times', {})
-            avg_response_days = response_data.get('avg_response_days', 0) if response_data.get('available') else 0
+            bug_total = 0
+            if bug_data.get('available') and bug_data.get('bug_vs_non_bug'):
+                bug_total = bug_data['bug_vs_non_bug'].get('Bug Cases', 0)
             
             cards_html = f"""
             <div class="stats-grid">
@@ -488,12 +486,8 @@ class TACVisualizer:
                     <div class="stat-label">Cases per Month</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">{bug_percentage}%</div>
+                    <div class="stat-number">{bug_total}</div>
                     <div class="stat-label">Bug-Related Cases</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{avg_response_days:.1f}</div>
-                    <div class="stat-label">Avg Response (Days)</div>
                 </div>
             </div>
             """
