@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def detect_file_encoding(file_path: Path) -> str:
     """
-    Detect file encoding.
+    Detect file encoding with robust fallback for CSV files.
     
     Args:
         file_path: Path to file
@@ -26,25 +26,39 @@ def detect_file_encoding(file_path: Path) -> str:
         Detected encoding string
     """
     try:
+        # Read a larger sample for better detection
         with open(file_path, 'rb') as f:
-            sample = f.read(10000)  # Read first 10KB
+            sample = f.read(50000)  # Read first 50KB for better detection
             result = chardet.detect(sample)
-            encoding = result.get('encoding', 'utf-8')
+            detected_encoding = result.get('encoding', 'utf-8')
+            confidence = result.get('confidence', 0)
             
-        # Fallback to common encodings if detection fails
-        if not encoding or result.get('confidence', 0) < 0.7:
-            encodings_to_try = ['utf-8', 'cp1252', 'iso-8859-1', 'utf-16']
-            for enc in encodings_to_try:
-                try:
-                    with open(file_path, 'r', encoding=enc) as f:
-                        f.read(1000)  # Try to read a bit
-                    return enc
-                except UnicodeDecodeError:
-                    continue
-            encoding = 'utf-8'  # Final fallback
-            
-        logger.debug(f"Detected encoding: {encoding}")
-        return encoding
+        logger.debug(f"Chardet detected: {detected_encoding} (confidence: {confidence})")
+        
+        # Test the detected encoding by trying to read the entire file
+        if detected_encoding:
+            try:
+                with open(file_path, 'r', encoding=detected_encoding) as f:
+                    f.read()  # Try to read entire file
+                logger.debug(f"Successfully validated encoding: {detected_encoding}")
+                return detected_encoding
+            except UnicodeDecodeError as e:
+                logger.debug(f"Detected encoding {detected_encoding} failed validation: {e}")
+        
+        # If detection failed or validation failed, try common encodings
+        encodings_to_try = ['utf-8', 'utf-8-sig', 'cp1252', 'iso-8859-1', 'ascii']
+        for enc in encodings_to_try:
+            try:
+                with open(file_path, 'r', encoding=enc) as f:
+                    f.read()  # Try to read entire file
+                logger.debug(f"Successfully validated fallback encoding: {enc}")
+                return enc
+            except UnicodeDecodeError:
+                continue
+                
+        # Final fallback
+        logger.warning("All encoding attempts failed, using utf-8 with error handling")
+        return 'utf-8'
         
     except Exception as e:
         logger.warning(f"Failed to detect encoding, using utf-8: {e}")

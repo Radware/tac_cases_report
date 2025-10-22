@@ -203,6 +203,14 @@ The generated reports include:
 - **Team Performance**: Engineer workload and queue distribution
 - **Customer Analytics**: Internal vs external case analysis
 
+## Version control
+
+V0.1.2 
+    Added support for MIS generated csv reports
+V0.1.1 Bugfixes adjustments
+V0.1.0 First push
+
+
 ## 🔄 Updates and Maintenance
 
 To update the tool:

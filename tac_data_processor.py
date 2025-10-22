@@ -128,12 +128,35 @@ class TACDataProcessor:
                     skip_rows = 1
             
             # Load with pandas for better handling of mixed data types
-            self.data = pd.read_csv(
-                self.file_path,
-                encoding=self.encoding,
-                skiprows=skip_rows,
-                low_memory=False
-            )
+            try:
+                self.data = pd.read_csv(
+                    self.file_path,
+                    encoding=self.encoding,
+                    skiprows=skip_rows,
+                    low_memory=False
+                )
+            except UnicodeDecodeError as e:
+                logger.warning(f"Encoding {self.encoding} failed, trying UTF-8: {e}")
+                # Fallback to UTF-8 with error handling
+                try:
+                    self.data = pd.read_csv(
+                        self.file_path,
+                        encoding='utf-8',
+                        skiprows=skip_rows,
+                        low_memory=False
+                    )
+                    self.encoding = 'utf-8'
+                except UnicodeDecodeError:
+                    # Final fallback with error replacement
+                    self.data = pd.read_csv(
+                        self.file_path,
+                        encoding='utf-8',
+                        skiprows=skip_rows,
+                        low_memory=False,
+                        encoding_errors='replace'
+                    )
+                    self.encoding = 'utf-8'
+                    logger.warning("Used UTF-8 encoding with character replacement")
             
             # Remove any footer rows (like "Record Count: 18")
             # Filter out rows where the first column contains "Record Count" or similar
