@@ -1,0 +1,5 @@
+tac_report.log
+__pycache__/
+*.pyc
+input_data/
+reports/
