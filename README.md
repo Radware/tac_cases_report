@@ -1,43 +1,17 @@
 # TAC Executive Report Generator
 
-A professional tool for generating executive-level reports from Technical Assistance Center (TAC) case data. Creates comprehensive HTML and PDF reports with interactive visualizations and business insights.
+This tool generates TAC cases interactive report with charts and insights from csv or excel report exported from Rightnow .
 
 ## 🎯 Features
 
-- **Executive-Level Insights**: Monthly trends, severity analysis, product impact, and team performance metrics
+- **Insights**: Monthly trends, severity analysis, case status, product and otehr metrics
 - **Flexible Input Support**: Processes both CSV and Excel files with intelligent column mapping
-- **Interactive Visualizations**: Professional charts with Plotly for executive presentations
-- **Multiple Output Formats**: HTML reports with embedded charts and optional PDF generation
-- **Bug Analysis**: Identifies bug-related cases and analyzes impact on support operations
-- **Customer Analytics**: Engineer workload distribution and case assignment patterns
-- **Professional Styling**: Radware-branded reports suitable for executive presentations
+- **Interactive Visualizations**: Charts with Plotly
+- **Multiple Output Formats**: HTML reports with embedded charts and optional PDF generation (PDF is still work in progress as of 10/23/2025 - some issues with rendering, use HTML for now)
+- **Bug Analysis**: Identifies cases that ended up as a bug and breakdown by product
+- **Customer Analytics**: TAC Engineer assignment patterns
 
 ## 📊 Report Sections
-
-### Key Performance Metrics
-- Total cases, monthly velocity, bug percentage, response times
-
-### Monthly Volume Trends
-- Case creation patterns with trend analysis
-- Seasonal workload identification
-
-### Severity Distribution
-- Critical, High, Medium, Low case breakdown
-- Priority-based resource allocation insights
-
-### Product Analysis
-- Cases by product hierarchy
-- Version-specific issue tracking
-
-### Bug Impact Analysis
-- Bug vs non-bug case ratios
-- Bug type categorization (AL-, CYCON-, etc.)
-- Severity distribution of bug-related cases
-
-### Team Performance
-- Engineer case distribution
-- Queue workload analysis
-- Internal vs external case ratios
 
 ## 🛠️ Installation
 
@@ -184,7 +158,6 @@ RADWARE_COLORS = {
 
 **Memory issues with large files**
 - The tool processes data in chunks to handle large files
-- Consider splitting very large files (>100MB) for better performance
 
 ### Getting Help
 1. Check the log file `tac_report.log` for detailed error messages
@@ -205,6 +178,7 @@ The generated reports include:
 
 ## Version control
 
+V0.2.1 Updated README.md
 V0.2.0 
     Added 2 new charts - by status and by owner
     Cosmetic improvements
@@ -216,6 +190,9 @@ V0.1.2
 V0.1.1 Bugfixes adjustments
 V0.1.0 First push
 
+## 📞 Support & Maintenance
+Project Maintainer: Egor Egorov (@egori4 | @rdwr-egore)
+Email: egore@radware.com
 
 ## 🔄 Updates and Maintenance
 
