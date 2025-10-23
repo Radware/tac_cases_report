@@ -127,6 +127,27 @@ CHART_COLOR_ASSIGNMENTS = {
     #     'primary': '#003f7f'   # Dark Blue for engineer assignment bars
     # },
 
+    # # Case owner assignment colors
+    # 'case_owner_assignment_colors': {
+    #     'primary': '#003f7f'   # Dark Blue for case owner assignment bars
+    # },
+
+    # Status distribution colors (optional: override automatic colors for specific status values)
+    # Option 1: Use a different color palette for all status values
+    # Specify a palette name from COLOR_PALETTES to use different colors than the default
+    
+    # 'status_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
+    
+    # Option 2: Override specific status colors (takes priority over palette)
+    # Only define colors here for statuses that need specific colors (e.g., Open=red, Closed=green)
+    # All other statuses will use the palette specified above
+    # 'status_colors': {
+    #     'Pending Customer': '#dc3545',           # Red for open cases (high priority)
+    #     'Closed': '#28a745',         # Green for closed cases (resolved)
+    #     # 'Pending R&D': '#ffc107',  # Yellow - uncomment if you want to override
+    #     # All other statuses will use colors from 'status_color_palette' automatically
+    # },
+
 
     
     # Internal/External colors
@@ -167,12 +188,14 @@ CHART_TYPES = {
     'bug_analysis': 'pie',
     'internal_external': 'pie',
     'queue_distribution': 'pie',
+    'status_distribution': 'pie',
 
     # Assignment charts (for ranking/comparison data)
     # Options: 'bar', 'horizontal_bar'
     # - 'bar': Vertical bars (good for rankings)
     # - 'horizontal_bar': Horizontal bars (better for names/labels)
     'engineer_assignment': 'horizontal_bar',
+    'case_owner_assignment': 'horizontal_bar',
 }
 
 # Advanced chart styling options

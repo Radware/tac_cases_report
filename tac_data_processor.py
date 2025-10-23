@@ -344,6 +344,8 @@ class TACDataProcessor:
             'internal_vs_external': self._get_internal_external_analysis(),
             'queue_analysis': self._get_queue_analysis(),
             'engineer_assignment': self._get_engineer_assignment(),
+            'case_owner_assignment': self._get_case_owner_assignment(),
+            'status_analysis': self._get_status_analysis(),
             'response_times': self._get_response_time_analysis()
         }
         
@@ -577,6 +579,42 @@ class TACDataProcessor:
             'queue_counts': queue_counts
         }
     
+    def _get_case_owner_assignment(self) -> Dict[str, Any]:
+        """Analyze case owner assignment metrics."""
+        if 'full_name' not in self.column_mapping:
+            return {'available': False, 'reason': 'No case owner/full name column found'}
+        
+        owner_col = self.column_mapping['full_name']
+        owner_counts = self.data[owner_col].value_counts().to_dict()
+        
+        # Analyze by status
+        owner_status = {}
+        if 'status' in self.column_mapping:
+            status_col = self.column_mapping['status']
+            for owner in owner_counts.keys():
+                owner_data = self.data[self.data[owner_col] == owner]
+                status_counts = owner_data[status_col].value_counts().to_dict()
+                owner_status[owner] = status_counts
+        
+        return {
+            'available': True,
+            'case_counts': owner_counts,
+            'status_breakdown': owner_status
+        }
+    
+    def _get_status_analysis(self) -> Dict[str, Any]:
+        """Analyze case status distribution."""
+        if 'status' not in self.column_mapping:
+            return {'available': False, 'reason': 'No status column found'}
+        
+        status_col = self.column_mapping['status']
+        status_counts = self.data[status_col].value_counts().to_dict()
+        
+        return {
+            'available': True,
+            'counts': status_counts
+        }
+
     def _get_engineer_assignment(self) -> Dict[str, Any]:
         """Analyze engineer performance metrics."""
         if 'assigned_account' not in self.column_mapping:

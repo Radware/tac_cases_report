@@ -205,6 +205,9 @@ The generated reports include:
 
 ## Version control
 
+V0.2.0 
+    Added 2 new charts - by status and by owner
+    Cosmetic improvements
 V0.1.2 
     Added support for MIS generated csv reports
     Added chart style control functionality to user, added to tac_config.py

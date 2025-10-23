@@ -160,6 +160,11 @@ class TACReportGenerator:
                 analytics.get('severity_analysis', {})
             )
             
+            # Status distribution
+            charts['status_distribution'] = self.visualizer.create_status_distribution_chart(
+                analytics.get('status_analysis', {})
+            )
+            
             # Product hierarchy
             charts['product_hierarchy'] = self.visualizer.create_product_hierarchy_chart(
                 analytics.get('product_analysis', {})
@@ -173,6 +178,11 @@ class TACReportGenerator:
             # Engineer performance
             charts['engineer_assignment'] = self.visualizer.create_engineer_assignment_chart(
                 analytics.get('engineer_assignment', {})
+            )
+            
+            # Case owner assignment
+            charts['case_owner_assignment'] = self.visualizer.create_case_owner_assignment_chart(
+                analytics.get('case_owner_assignment', {})
             )
             
             # Internal vs External
@@ -294,13 +304,13 @@ class TACReportGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAC Executive Report - {base_name.replace('_', ' ').title()}</title>
+    <title>TAC Cases Report - {base_name.replace('_', ' ').title()}</title>
     {REPORT_CSS}
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>TAC Executive Report</h1>
+            <h1>TAC Cases Report</h1>
             <p class="subtitle">{base_name.replace('_', ' ').title()}</p>
             <p class="generation-info">Generated on {generation_time}</p>
         </div>
@@ -339,6 +349,18 @@ class TACReportGenerator:
                 </p>
             </div>
             
+            <!-- Status Analysis -->
+            <div class="section">
+                <h2>Case Status Distribution</h2>
+                <div class="chart-container">
+                    {charts['status_distribution']}
+                </div>
+                <p class="chart-description">
+                    Status distribution shows the current state of cases, helping track progress and 
+                    identify bottlenecks in the resolution process.
+                </p>
+            </div>
+            
             <!-- Product Analysis -->
             <div class="section">
                 <h2>Product Hierarchy Analysis</h2>
@@ -372,6 +394,18 @@ class TACReportGenerator:
                 <p class="chart-description">
                     Case distribution by engineer provides insights into workload balance and 
                     individual performance metrics for team management.
+                </p>
+            </div>
+            
+            <!-- Case Owner Assignment -->
+            <div class="section">
+                <h2>Case Owner Distribution</h2>
+                <div class="chart-container">
+                    {charts['case_owner_assignment']}
+                </div>
+                <p class="chart-description">
+                    Case distribution by case owner shows who is creating or owning the most cases, 
+                    providing insights into customer activity and case ownership patterns.
                 </p>
             </div>
             

@@ -248,7 +248,7 @@ class TACVisualizer:
                     color='#2c3e50'  # Dark text outside
                 ),
                 pull=[0.01] * len(labels),  # Slightly separate all slices for 3D effect
-                domain=dict(x=[0.05, 0.95], y=[0.1, 0.9]),  # Larger pie chart with minimal margins
+                domain=dict(x=[0.0, 0.65], y=[0.1, 0.9]),  # Fixed pie chart position - consistent for all pies
                 hovertemplate='<b>%{label}</b><br>' +
                              'Cases: <b>%{value}</b><br>' +
                              'Percentage: <b>%{percent}</b><br>' +
@@ -322,26 +322,26 @@ class TACVisualizer:
                 'showlegend': True,
                 'legend': dict(
                     orientation='v',  # Vertical legend for pie charts
-                    yanchor='middle',
-                    y=0.5,
+                    yanchor='top',
+                    y=0.9,
                     xanchor='left',
-                    x=1.02,
+                    x=0.67,  # Fixed legend position - consistent for all pies
                     bgcolor='rgba(255,255,255,0.8)',
                     bordercolor='#e1e8ed',
                     borderwidth=1,
                     font=dict(
-                        size=12,
+                        size=11,
                         family='Arial, sans-serif',
                         color='#2c3e50'
                     )
                 ),
                 'plot_bgcolor': 'white',
                 'paper_bgcolor': 'white',
-                'margin': dict(l=50, r=150, t=100, b=50),  # Increased margins for better spacing
+                'margin': dict(l=40, r=40, t=100, b=80),  # Fixed margins for consistent pie chart alignment
                 'annotations': [
                     dict(
                         text=f'Total Cases: {sum(values)}',
-                        x=0.5, y=0.05,  # Moved annotation higher to avoid overlap
+                        x=0.5, y=-0.15,  # Moved annotation much lower to avoid overlap with pie labels
                         xref='paper', yref='paper',
                         showarrow=False,
                         font=dict(
@@ -423,6 +423,53 @@ class TACVisualizer:
             logger.error(f"Failed to create severity distribution chart: {e}")
             return self._create_error_message("Severity Distribution Chart")
     
+    def create_status_distribution_chart(self, status_data: Dict[str, Any]) -> str:
+        """
+        Create status distribution chart with configurable chart type.
+        
+        Args:
+            status_data: Status analysis data
+            
+        Returns:
+            HTML string with chart
+        """
+        if not status_data.get('available') or not status_data.get('counts'):
+            return self._create_not_available_message("Status Distribution", 
+                status_data.get('reason', 'No data available'))
+        
+        try:
+            from tac_config import CHART_TYPES
+            
+            counts = status_data['counts']
+            chart_type = CHART_TYPES.get('status_distribution', 'pie')
+            
+            # Sort by count (descending)
+            sorted_statuses = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+            statuses = [item[0] for item in sorted_statuses]
+            values = [item[1] for item in sorted_statuses]
+            
+            # Get colors for statuses
+            colors = self._get_status_colors(statuses)
+            
+            fig = self._create_distribution_chart(
+                labels=statuses,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Case Distribution by Status',
+                div_id='status_distribution_chart'
+            )
+            
+            return fig.to_html(
+                include_plotlyjs=CHART_PLOTLYJS_MODE,
+                div_id="status_distribution_chart",
+                config=CHART_CONFIG
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create status distribution chart: {e}")
+            return self._create_error_message("Status Distribution Chart")
+
     def create_product_hierarchy_chart(self, product_data: Dict[str, Any]) -> str:
         """
         Create product hierarchy distribution chart with configurable chart type.
@@ -672,6 +719,57 @@ class TACVisualizer:
             logger.error(f"Failed to create engineer assignment chart: {e}")
             return self._create_error_message("Engineer Assignment Chart")
     
+    def create_case_owner_assignment_chart(self, owner_data: Dict[str, Any]) -> str:
+        """
+        Create case owner assignment chart with configurable chart type.
+        
+        Args:
+            owner_data: Case owner assignment data
+            
+        Returns:
+            HTML string with chart
+        """
+        if not owner_data.get('available') or not owner_data.get('case_counts'):
+            return self._create_not_available_message("Case Owner Assignment", 
+                owner_data.get('reason', 'No data available'))
+        
+        try:
+            from tac_config import CHART_TYPES
+            
+            case_counts = owner_data['case_counts']
+            chart_type = CHART_TYPES.get('case_owner_assignment', 'horizontal_bar')
+            
+            # Sort by case count and get top 15
+            sorted_owners = sorted(case_counts.items(), key=lambda x: x[1], reverse=True)[:15]
+            owners = [item[0] for item in sorted_owners]
+            values = [item[1] for item in sorted_owners]
+            
+            # Color assignment for case owners
+            owner_colors = self.color_assignments.get('case_owner_assignment_colors', {})
+            if owner_colors.get('primary'):
+                colors = [owner_colors['primary']] * len(owners)
+            else:
+                colors = [self.chart_colors[0]] * len(owners)
+            
+            fig = self._create_assignment_chart(
+                labels=owners,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Cases by Case Owner (Top 15)',
+                div_id='case_owner_assignment_chart'
+            )
+            
+            return fig.to_html(
+                include_plotlyjs=CHART_PLOTLYJS_MODE,
+                div_id="case_owner_assignment_chart",
+                config=CHART_CONFIG
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create case owner assignment chart: {e}")
+            return self._create_error_message("Case Owner Assignment Chart")
+
     def create_internal_external_chart(self, internal_data: Dict[str, Any]) -> str:
         """
         Create internal vs external cases chart with configurable chart type.
@@ -827,6 +925,39 @@ class TACVisualizer:
         intercept = (sum_y - slope * sum_x) / n
         
         return intercept, slope
+    
+    def _get_status_colors(self, statuses: List[str]) -> List[str]:
+        """
+        Get colors for status values using palette override or explicit colors.
+        
+        Args:
+            statuses: List of status values
+            
+        Returns:
+            List of color codes for each status
+        """
+        from tac_config import COLOR_PALETTES
+        
+        # Get status-specific color configurations
+        status_colors = self.color_assignments.get('status_colors', {})
+        status_palette_name = self.color_assignments.get('status_color_palette')
+        
+        # Use status-specific palette if specified, otherwise use default
+        if status_palette_name and status_palette_name in COLOR_PALETTES:
+            status_palette = COLOR_PALETTES[status_palette_name]
+        else:
+            status_palette = self.chart_colors
+        
+        colors = []
+        for i, status in enumerate(statuses):
+            # First check if there's an explicit color defined for this status
+            if status in status_colors:
+                colors.append(status_colors[status])
+            else:
+                # Use color from the status palette (cycling through if needed)
+                colors.append(status_palette[i % len(status_palette)])
+        
+        return colors
     
     def _create_not_available_message(self, chart_name: str, reason: str = "Data not available") -> str:
         """Create a not available message for charts."""
