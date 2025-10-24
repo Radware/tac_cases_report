@@ -6,20 +6,6 @@ Users can modify these settings to customize report appearance and chart types w
 modifying the core code.
 """
 
-# Chart styling constants for Radware branding
-# this is needed for UI elements, specifically the header and footer
-RADWARE_COLORS = {
-    'primary': '#003f7f',      # Radware blue
-    'secondary': '#6cb2eb',    # Light blue
-    'accent': '#ff6b35',       # Orange accent
-    'success': '#28a745',      # Green
-    'warning': '#ffc107',      # Yellow
-    'danger': '#dc3545',       # Red
-    'dark': '#343a40',         # Dark gray
-    'light': '#f8f9fa',        # Light gray
-    'background': '#ffffff',    # White background
-}
-
 # ============================================================================
 # COLOR CONFIGURATION - USER CUSTOMIZABLE
 # ============================================================================
@@ -175,7 +161,7 @@ PDF_CHART_DIMENSIONS = {
     },
     'bug_analysis_chart': {
         'width': 500,   # Even smaller for side-by-side layout
-        'height': 350   # Smaller height to fit both charts on one page
+        'height': 450   # Increased height to properly accommodate two pie charts side by side
     },
     'bar_chart': {
         'width': 550,   # Good width for bar charts

@@ -15,7 +15,7 @@ from datetime import datetime
 from collections import Counter
 
 from tac_config import (
-    RADWARE_COLORS, COLOR_PALETTES, ACTIVE_COLOR_PALETTE, CHART_COLOR_ASSIGNMENTS,
+    COLOR_PALETTES, ACTIVE_COLOR_PALETTE, CHART_COLOR_ASSIGNMENTS,
     CHART_CONFIG, CHART_LAYOUT, CHART_PLOTLYJS_MODE
 )
 from tac_utils import format_number, calculate_percentage
@@ -34,12 +34,10 @@ class TACVisualizer:
         Args:
             output_format: Target output format ('html' or 'pdf')
         """
-        self.colors = RADWARE_COLORS
-        self.output_format = output_format
-        
         # Get active color palette
         self.chart_colors = COLOR_PALETTES.get(ACTIVE_COLOR_PALETTE, COLOR_PALETTES['radware_corporate'])
         self.color_assignments = CHART_COLOR_ASSIGNMENTS
+        self.output_format = output_format
         
         # Load PDF-specific settings if generating for PDF
         if output_format == 'pdf':
@@ -169,7 +167,7 @@ class TACVisualizer:
                         y=trend_y,
                         mode='lines',
                         name='Trend',
-                        line=dict(color=self.colors['accent'], width=2, dash='dash'),
+                        line=dict(color=self.chart_colors[2], width=2, dash='dash'),  # Use 3rd color from palette for accent
                         hovertemplate='Trend: %{y:.1f}<extra></extra>'
                     ))
                     
@@ -204,7 +202,7 @@ class TACVisualizer:
                         y=trend_y,
                         mode='lines',
                         name='Trend',
-                        line=dict(color=self.colors['accent'], width=2, dash='dash'),
+                        line=dict(color=self.chart_colors[2], width=2, dash='dash'),  # Use 3rd color from palette for accent
                         hovertemplate='Trend: %{y:.1f}<extra></extra>'
                     ))
             
@@ -659,6 +657,13 @@ class TACVisualizer:
     def _create_compact_bug_analysis(self, bug_vs_non_bug: dict, bug_types: dict, chart_type: str) -> str:
         """Create compact side-by-side layout for PDF."""
         from plotly.subplots import make_subplots
+        from tac_config import CHART_STYLES
+        
+        # Get pie chart styling from config
+        style = CHART_STYLES.get('distribution_charts', {}).get(chart_type, {})
+        hole_size = style.get('hole', 0.3 if chart_type == 'pie' else 0.5)
+        textinfo = style.get('textinfo', 'label+value')
+        textposition = style.get('textposition', 'outside')
         
         # Create subplot with 1 row, 2 columns
         fig = make_subplots(
@@ -678,11 +683,46 @@ class TACVisualizer:
         fig.add_trace(go.Pie(
             labels=labels1,
             values=values1,
-            marker=dict(colors=colors1),
-            textinfo='label+percent',
-            textposition='outside',
+            hole=hole_size,
+            marker=dict(
+                colors=colors1,
+                line=dict(
+                    color='white',  # White borders between slices
+                    width=3         # Thick borders for clean separation
+                )
+            ),
+            textinfo=textinfo,
+            textposition=textposition,
+            textfont=dict(
+                size=14,
+                family='Arial, sans-serif',
+                color='#2c3e50'  # Dark color for better readability
+            ),
+            insidetextfont=dict(
+                size=16,
+                family='Arial, sans-serif', 
+                color='white'  # White text inside slices
+            ),
+            outsidetextfont=dict(
+                size=14,
+                family='Arial, sans-serif',
+                color='#2c3e50'  # Dark text outside
+            ),
+            pull=[0.01] * len(labels1),  # Slightly separate all slices for 3D effect
             domain=dict(x=[0.0, 0.45], y=[0.0, 1.0]),
-            hole=0.3 if chart_type == 'donut' else 0
+            hovertemplate='<b>%{label}</b><br>' +
+                         'Cases: <b>%{value}</b><br>' +
+                         'Percentage: <b>%{percent}</b><br>' +
+                         '<extra></extra>',
+            hoverlabel=dict(
+                bgcolor='rgba(255,255,255,0.95)',
+                bordercolor='#2c3e50',
+                font=dict(
+                    color='#2c3e50',
+                    size=13,
+                    family='Arial, sans-serif'
+                )
+            )
         ), row=1, col=1)
         
         # Chart 2: Bug Types Breakdown
@@ -694,11 +734,46 @@ class TACVisualizer:
             fig.add_trace(go.Pie(
                 labels=labels2,
                 values=values2,
-                marker=dict(colors=colors2),
-                textinfo='label+percent',
-                textposition='outside',
+                hole=hole_size,
+                marker=dict(
+                    colors=colors2,
+                    line=dict(
+                        color='white',  # White borders between slices
+                        width=3         # Thick borders for clean separation
+                    )
+                ),
+                textinfo=textinfo,
+                textposition=textposition,
+                textfont=dict(
+                    size=14,
+                    family='Arial, sans-serif',
+                    color='#2c3e50'  # Dark color for better readability
+                ),
+                insidetextfont=dict(
+                    size=16,
+                    family='Arial, sans-serif', 
+                    color='white'  # White text inside slices
+                ),
+                outsidetextfont=dict(
+                    size=14,
+                    family='Arial, sans-serif',
+                    color='#2c3e50'  # Dark text outside
+                ),
+                pull=[0.01] * len(labels2),  # Slightly separate all slices for 3D effect
                 domain=dict(x=[0.55, 1.0], y=[0.0, 1.0]),
-                hole=0.3 if chart_type == 'donut' else 0
+                hovertemplate='<b>%{label}</b><br>' +
+                             'Cases: <b>%{value}</b><br>' +
+                             'Percentage: <b>%{percent}</b><br>' +
+                             '<extra></extra>',
+                hoverlabel=dict(
+                    bgcolor='rgba(255,255,255,0.95)',
+                    bordercolor='#2c3e50',
+                    font=dict(
+                        color='#2c3e50',
+                        size=13,
+                        family='Arial, sans-serif'
+                    )
+                )
             ), row=1, col=2)
         
         # Update layout for compact format

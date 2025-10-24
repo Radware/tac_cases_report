@@ -132,10 +132,20 @@ OUTPUT_FORMATS = ['html', 'pdf'] # Both formats
 ### Chart Styling
 Customize colors and branding in `tac_config.py`:
 ```python
-RADWARE_COLORS = {
-    'primary': '#003f7f',    # Radware blue
-    'secondary': '#6cb2eb',  # Light blue
-    # ... more colors
+# Choose from available color palettes
+ACTIVE_COLOR_PALETTE = 'professional_blue'  # Options: 'radware_corporate', 'professional_blue', etc.
+
+# Available palettes
+COLOR_PALETTES = {
+    'radware_corporate': [
+        '#003f7f', '#6cb2eb', '#ff6b35', '#28a745', '#ffc107',
+        # ... more colors
+    ],
+    'professional_blue': [
+        '#1f4e79', '#2e75b6', '#5b9bd5', '#9fc5e8',
+        # ... more colors  
+    ]
+    # ... more palettes
 }
 ```
 
@@ -178,6 +188,7 @@ The generated reports include:
 
 ## Version control
 
+V0.2.3 Improved coloring scheme, improved Bugs chart layout for PDF
 V0.2.2 Fixed PDF export to properly export charts and fit them to PDF page
 V0.2.1 Updated README.md
 V0.2.0 
