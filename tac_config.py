@@ -6,6 +6,10 @@ Users can modify these settings to customize report appearance and chart types w
 modifying the core code.
 """
 
+# Output format configuration
+OUTPUT_FORMATS = ['pdf','html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+
+
 # ============================================================================
 # COLOR CONFIGURATION - USER CUSTOMIZABLE
 # ============================================================================
@@ -145,8 +149,6 @@ CHART_COLOR_ASSIGNMENTS = {
 
 }
 
-# Output format configuration
-OUTPUT_FORMATS = ['pdf','html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
 
 # ============================================================================
 # PDF-SPECIFIC CONFIGURATION - USER CUSTOMIZABLE
