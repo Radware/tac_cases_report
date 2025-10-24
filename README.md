@@ -7,7 +7,7 @@ This tool generates TAC cases interactive report with charts and insights from c
 - **Insights**: Monthly trends, severity analysis, case status, product and otehr metrics
 - **Flexible Input Support**: Processes both CSV and Excel files with intelligent column mapping
 - **Interactive Visualizations**: Charts with Plotly
-- **Multiple Output Formats**: HTML reports with embedded charts and optional PDF generation (PDF is still work in progress as of 10/23/2025 - some issues with rendering, use HTML for now)
+- **Multiple Output Formats**: HTML reports with embedded charts and optional PDF generation
 - **Bug Analysis**: Identifies cases that ended up as a bug and breakdown by product
 - **Customer Analytics**: TAC Engineer assignment patterns
 
@@ -178,6 +178,7 @@ The generated reports include:
 
 ## Version control
 
+V0.2.2 Fixed PDF export to properly export charts and fit them to PDF page
 V0.2.1 Updated README.md
 V0.2.0 
     Added 2 new charts - by status and by owner

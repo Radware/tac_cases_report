@@ -28,13 +28,27 @@ class TACVisualizer:
     Creates interactive visualizations for TAC case analysis.
     """
     
-    def __init__(self):
-        """Initialize the visualizer with configurable colors."""
+    def __init__(self, output_format: str = 'html'):
+        """Initialize the visualizer with configurable colors and output format.
+        
+        Args:
+            output_format: Target output format ('html' or 'pdf')
+        """
         self.colors = RADWARE_COLORS
+        self.output_format = output_format
         
         # Get active color palette
         self.chart_colors = COLOR_PALETTES.get(ACTIVE_COLOR_PALETTE, COLOR_PALETTES['radware_corporate'])
         self.color_assignments = CHART_COLOR_ASSIGNMENTS
+        
+        # Load PDF-specific settings if generating for PDF
+        if output_format == 'pdf':
+            from tac_config import PDF_CHART_DIMENSIONS, PDF_LAYOUT_SETTINGS
+            self.pdf_dimensions = PDF_CHART_DIMENSIONS
+            self.pdf_layout = PDF_LAYOUT_SETTINGS
+        else:
+            self.pdf_dimensions = None
+            self.pdf_layout = None
         
         # Common layout settings
         self.common_layout = {
@@ -45,6 +59,26 @@ class TACVisualizer:
         }
         
         logger.info("Initialized TAC Visualizer")
+    
+    def _get_chart_width(self, chart_type: str = 'standard') -> int:
+        """Get appropriate chart width based on output format."""
+        if self.output_format == 'pdf' and self.pdf_dimensions:
+            chart_key = f'{chart_type}_chart'
+            return self.pdf_dimensions.get(chart_key, {}).get('width', 650)
+        return 900  # Default HTML width
+    
+    def _get_chart_height(self, chart_type: str = 'standard') -> int:
+        """Get appropriate chart height based on output format."""
+        if self.output_format == 'pdf' and self.pdf_dimensions:
+            chart_key = f'{chart_type}_chart'
+            return self.pdf_dimensions.get(chart_key, {}).get('height', 400)
+        return 600  # Default HTML height
+    
+    def _get_chart_margins(self) -> dict:
+        """Get appropriate chart margins based on output format."""
+        if self.output_format == 'pdf' and self.pdf_layout:
+            return self.pdf_layout.get('chart_margins', {'l': 30, 'r': 30, 't': 80, 'b': 60})
+        return {'l': 40, 'r': 40, 't': 100, 'b': 80}  # Default margins
     
     def create_monthly_cases_chart(self, monthly_data: Dict[str, Any]) -> str:
         """
@@ -174,12 +208,18 @@ class TACVisualizer:
                         hovertemplate='Trend: %{y:.1f}<extra></extra>'
                     ))
             
+            # Create base layout without margin conflicts
+            base_layout = {k: v for k, v in self.common_layout.items() if k != 'margin'}
+            
             fig.update_layout(
                 title='TAC Cases Created by Month',
                 xaxis_title='Month',
                 yaxis_title='Number of Cases',
                 yaxis=dict(rangemode='tozero'),  # Start y-axis from 0
-                **self.common_layout
+                width=self._get_chart_width('standard'),
+                height=self._get_chart_height('standard'),
+                margin=self._get_chart_margins(),
+                **base_layout
             )
             
             return fig.to_html(
@@ -317,8 +357,8 @@ class TACVisualizer:
                     x=0.5,  # Center the title
                     y=0.95
                 ),
-                'width': 900,
-                'height': 600,
+                'width': self._get_chart_width('standard'),
+                'height': self._get_chart_height('standard'),
                 'showlegend': True,
                 'legend': dict(
                     orientation='v',  # Vertical legend for pie charts
@@ -337,7 +377,7 @@ class TACVisualizer:
                 ),
                 'plot_bgcolor': 'white',
                 'paper_bgcolor': 'white',
-                'margin': dict(l=40, r=40, t=100, b=80),  # Fixed margins for consistent pie chart alignment
+                'margin': self._get_chart_margins(),  # Use format-appropriate margins
                 'annotations': [
                     dict(
                         text=f'Total Cases: {sum(values)}',
@@ -548,58 +588,140 @@ class TACVisualizer:
             bug_types = bug_data.get('bug_types', {})
             chart_type = CHART_TYPES.get('bug_analysis', 'pie')
             
-            charts_html = ""
+            # Check if we should use compact layout for PDF
+            use_compact = (self.output_format == 'pdf' and 
+                          self.pdf_layout and 
+                          self.pdf_layout.get('use_compact_bug_analysis', False) and
+                          bug_types and len(bug_types) > 0)
             
-            # Chart 1: Bug vs Non-Bug Analysis
-            labels = list(bug_vs_non_bug.keys())
-            values = list(bug_vs_non_bug.values())
-            
-            # Use configurable bug colors
-            bug_colors = self.color_assignments.get('bug_colors', {})
-            colors = [bug_colors.get(label, self.chart_colors[i % len(self.chart_colors)]) 
-                     for i, label in enumerate(labels)]
-            
-            fig1 = self._create_distribution_chart(
-                labels=labels,
-                values=values,
-                colors=colors,
-                chart_type=chart_type,
-                title='Bug vs Non-Bug Cases',
-                div_id='bug_analysis_main_chart'
-            )
-            
-            charts_html += fig1.to_html(
-                include_plotlyjs=CHART_PLOTLYJS_MODE,
-                div_id="bug_analysis_main_chart",
-                config=CHART_CONFIG
-            )
-            
-            # Chart 2: Bug Types Breakdown (if there are bugs)
-            if bug_types and len(bug_types) > 0:
-                bug_labels = list(bug_types.keys())
-                bug_values = list(bug_types.values())
-                bug_colors = self.chart_colors[:len(bug_labels)]
-                
-                fig2 = self._create_distribution_chart(
-                    labels=bug_labels,
-                    values=bug_values,
-                    colors=bug_colors,
-                    chart_type=chart_type,
-                    title='Bug Types Breakdown',
-                    div_id='bug_types_chart'
-                )
-                
-                charts_html += "<br><br>" + fig2.to_html(
-                    include_plotlyjs=False,  # Don't include plotly.js again
-                    div_id="bug_types_chart",
-                    config=CHART_CONFIG
-                )
-            
-            return charts_html
+            if use_compact:
+                # Create side-by-side layout for PDF
+                return self._create_compact_bug_analysis(bug_vs_non_bug, bug_types, chart_type)
+            else:
+                # Create standard vertical layout
+                return self._create_standard_bug_analysis(bug_vs_non_bug, bug_types, chart_type)
             
         except Exception as e:
             logger.error(f"Failed to create bug analysis chart: {e}")
             return self._create_error_message("Bug Analysis Chart")
+    
+    def _create_standard_bug_analysis(self, bug_vs_non_bug: dict, bug_types: dict, chart_type: str) -> str:
+        """Create standard vertical layout for bug analysis."""
+        charts_html = ""
+        
+        # Chart 1: Bug vs Non-Bug Analysis
+        labels = list(bug_vs_non_bug.keys())
+        values = list(bug_vs_non_bug.values())
+        
+        # Use configurable bug colors
+        bug_colors = self.color_assignments.get('bug_colors', {})
+        colors = [bug_colors.get(label, self.chart_colors[i % len(self.chart_colors)]) 
+                 for i, label in enumerate(labels)]
+        
+        fig1 = self._create_distribution_chart(
+            labels=labels,
+            values=values,
+            colors=colors,
+            chart_type=chart_type,
+            title='Bug vs Non-Bug Cases',
+            div_id='bug_analysis_main_chart'
+        )
+        
+        charts_html += fig1.to_html(
+            include_plotlyjs=CHART_PLOTLYJS_MODE,
+            div_id="bug_analysis_main_chart",
+            config=CHART_CONFIG
+        )
+        
+        # Chart 2: Bug Types Breakdown (if there are bugs)
+        if bug_types and len(bug_types) > 0:
+            bug_labels = list(bug_types.keys())
+            bug_values = list(bug_types.values())
+            bug_colors_list = self.chart_colors[:len(bug_labels)]
+            
+            fig2 = self._create_distribution_chart(
+                labels=bug_labels,
+                values=bug_values,
+                colors=bug_colors_list,
+                chart_type=chart_type,
+                title='Bug Types Breakdown',
+                div_id='bug_types_chart'
+            )
+            
+            charts_html += "<br><br>" + fig2.to_html(
+                include_plotlyjs=False,  # Don't include plotly.js again
+                div_id="bug_types_chart",
+                config=CHART_CONFIG
+            )
+        
+        return charts_html
+    
+    def _create_compact_bug_analysis(self, bug_vs_non_bug: dict, bug_types: dict, chart_type: str) -> str:
+        """Create compact side-by-side layout for PDF."""
+        from plotly.subplots import make_subplots
+        
+        # Create subplot with 1 row, 2 columns
+        fig = make_subplots(
+            rows=1, cols=2,
+            specs=[[{'type': 'domain'}, {'type': 'domain'}]],
+            subplot_titles=('Bug vs Non-Bug Cases', 'Bug Types Breakdown'),
+            horizontal_spacing=0.05
+        )
+        
+        # Chart 1: Bug vs Non-Bug Analysis
+        labels1 = list(bug_vs_non_bug.keys())
+        values1 = list(bug_vs_non_bug.values())
+        bug_colors = self.color_assignments.get('bug_colors', {})
+        colors1 = [bug_colors.get(label, self.chart_colors[i % len(self.chart_colors)]) 
+                  for i, label in enumerate(labels1)]
+        
+        fig.add_trace(go.Pie(
+            labels=labels1,
+            values=values1,
+            marker=dict(colors=colors1),
+            textinfo='label+percent',
+            textposition='outside',
+            domain=dict(x=[0.0, 0.45], y=[0.0, 1.0]),
+            hole=0.3 if chart_type == 'donut' else 0
+        ), row=1, col=1)
+        
+        # Chart 2: Bug Types Breakdown
+        if bug_types and len(bug_types) > 0:
+            labels2 = list(bug_types.keys())
+            values2 = list(bug_types.values())
+            colors2 = self.chart_colors[:len(labels2)]
+            
+            fig.add_trace(go.Pie(
+                labels=labels2,
+                values=values2,
+                marker=dict(colors=colors2),
+                textinfo='label+percent',
+                textposition='outside',
+                domain=dict(x=[0.55, 1.0], y=[0.0, 1.0]),
+                hole=0.3 if chart_type == 'donut' else 0
+            ), row=1, col=2)
+        
+        # Update layout for compact format
+        fig.update_layout(
+            title="Bug-Related Case Analysis",
+            width=self._get_chart_width('bug_analysis'),
+            height=self._get_chart_height('bug_analysis'),
+            margin=self._get_chart_margins(),
+            showlegend=True,
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=-0.2,
+                xanchor='center',
+                x=0.5
+            )
+        )
+        
+        return fig.to_html(
+            include_plotlyjs=CHART_PLOTLYJS_MODE,
+            div_id="bug_analysis_compact_chart",
+            config=CHART_CONFIG
+        )
     
     def _create_assignment_chart(self, labels: list, values: list, colors: list,
                                 chart_type: str, title: str, div_id: str) -> go.Figure:
@@ -663,9 +785,15 @@ class TACVisualizer:
                 yaxis=dict(rangemode='tozero')
             )
         
+        # Create base layout without margin conflicts
+        base_layout = {k: v for k, v in self.common_layout.items() if k != 'margin'}
+        
         fig.update_layout(
             title=title,
-            **self.common_layout
+            width=self._get_chart_width('bar'),
+            height=self._get_chart_height('bar'),
+            margin=self._get_chart_margins(),
+            **base_layout
         )
         
         return fig

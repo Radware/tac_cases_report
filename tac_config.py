@@ -160,7 +160,36 @@ CHART_COLOR_ASSIGNMENTS = {
 }
 
 # Output format configuration
-OUTPUT_FORMATS = ['html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+OUTPUT_FORMATS = ['pdf','html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+
+# ============================================================================
+# PDF-SPECIFIC CONFIGURATION - USER CUSTOMIZABLE
+# ============================================================================
+# Special configurations for PDF reports to ensure charts fit properly on pages
+
+# PDF Chart dimensions (smaller than HTML to fit better on PDF pages)
+PDF_CHART_DIMENSIONS = {
+    'standard_chart': {
+        'width': 550,   # Reduced from 900 to fit PDF page width
+        'height': 400   # Reduced from 600 to fit better vertically
+    },
+    'bug_analysis_chart': {
+        'width': 500,   # Even smaller for side-by-side layout
+        'height': 350   # Smaller height to fit both charts on one page
+    },
+    'bar_chart': {
+        'width': 550,   # Good width for bar charts
+        'height': 350   # Shorter height to prevent cutting
+    }
+}
+
+# PDF Page layout settings
+PDF_LAYOUT_SETTINGS = {
+    'use_compact_bug_analysis': True,  # Show both bug charts side by side
+    'chart_margins': {
+        'l': 30, 'r': 30, 't': 80, 'b': 60  # Smaller margins for PDF
+    }
+}
 
 # ============================================================================
 # CHART TYPE CONFIGURATION - USER CUSTOMIZABLE

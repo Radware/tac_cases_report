@@ -66,26 +66,27 @@ class TACReportGenerator:
         try:
             # Generate HTML report
             if 'html' in formats:
-                html_path = self._generate_html_report(base_name, analytics, file_analysis)
+                html_path = self._generate_html_report(base_name, analytics, file_analysis, output_format='html')
                 generated_files['html'] = html_path
                 logger.info(f"Generated HTML report: {html_path}")
             
             # Generate PDF report
             if 'pdf' in formats:
                 if 'html' in generated_files:
-                    # Use the HTML file we just generated
-                    html_path = generated_files['html']
+                    # Generate separate PDF-optimized HTML
+                    pdf_html_path = self._generate_html_report(base_name, analytics, file_analysis, output_format='pdf')
+                    pdf_path = self._generate_pdf_report(pdf_html_path, base_name)
+                    # Clean up temporary PDF-optimized HTML
+                    pdf_html_path.unlink()
                 else:
-                    # Generate HTML first for PDF conversion
-                    html_path = self._generate_html_report(base_name, analytics, file_analysis)
+                    # Generate PDF-optimized HTML first for PDF conversion
+                    pdf_html_path = self._generate_html_report(base_name, analytics, file_analysis, output_format='pdf')
+                    pdf_path = self._generate_pdf_report(pdf_html_path, base_name)
+                    # Clean up temporary HTML if we only wanted PDF
+                    pdf_html_path.unlink()
                 
-                pdf_path = self._generate_pdf_report(html_path, base_name)
                 generated_files['pdf'] = pdf_path
                 logger.info(f"Generated PDF report: {pdf_path}")
-                
-                # Clean up temporary HTML if we only wanted PDF
-                if 'html' not in formats:
-                    html_path.unlink()
             
             return generated_files
             
@@ -97,7 +98,8 @@ class TACReportGenerator:
         self,
         base_name: str,
         analytics: Dict[str, Any],
-        file_analysis: Dict[str, Any]
+        file_analysis: Dict[str, Any],
+        output_format: str = 'html'
     ) -> Path:
         """
         Generate HTML report with embedded visualizations.
@@ -106,15 +108,22 @@ class TACReportGenerator:
             base_name: Base filename for the report
             analytics: Complete analytics data
             file_analysis: File analysis information
+            output_format: Target output format ('html' or 'pdf')
             
         Returns:
             Path to generated HTML file
         """
-        output_path = self.output_dir / f"{base_name}_executive_report.html"
+        if output_format == 'pdf':
+            output_path = self.output_dir / f"{base_name}_executive_report_pdf_temp.html"
+        else:
+            output_path = self.output_dir / f"{base_name}_executive_report.html"
         
         try:
-            # Generate all visualizations
-            charts = self._generate_all_charts(analytics)
+            # Create format-specific visualizer
+            format_visualizer = TACVisualizer(output_format=output_format)
+            
+            # Generate all visualizations with format-specific settings
+            charts = self._generate_all_charts(analytics, format_visualizer)
             
             # Create executive summary
             executive_summary = self._create_executive_summary(analytics)
@@ -134,64 +143,67 @@ class TACReportGenerator:
             logger.error(f"Failed to generate HTML report: {e}")
             raise
     
-    def _generate_all_charts(self, analytics: Dict[str, Any]) -> Dict[str, str]:
+    def _generate_all_charts(self, analytics: Dict[str, Any], visualizer: TACVisualizer = None) -> Dict[str, str]:
         """
         Generate all charts for the report.
         
         Args:
             analytics: Complete analytics data
+            visualizer: TACVisualizer instance (uses self.visualizer if not provided)
             
         Returns:
             Dictionary of chart HTML strings
         """
         try:
+            # Use provided visualizer or default
+            viz = visualizer or self.visualizer
             charts = {}
             
             # Summary statistics cards
-            charts['summary_stats'] = self.visualizer.create_summary_statistics_cards(analytics)
+            charts['summary_stats'] = viz.create_summary_statistics_cards(analytics)
             
             # Monthly trends
-            charts['monthly_trends'] = self.visualizer.create_monthly_cases_chart(
+            charts['monthly_trends'] = viz.create_monthly_cases_chart(
                 analytics.get('monthly_trends', {})
             )
             
             # Severity distribution
-            charts['severity_distribution'] = self.visualizer.create_severity_distribution_chart(
+            charts['severity_distribution'] = viz.create_severity_distribution_chart(
                 analytics.get('severity_analysis', {})
             )
             
             # Status distribution
-            charts['status_distribution'] = self.visualizer.create_status_distribution_chart(
+            charts['status_distribution'] = viz.create_status_distribution_chart(
                 analytics.get('status_analysis', {})
             )
             
             # Product hierarchy
-            charts['product_hierarchy'] = self.visualizer.create_product_hierarchy_chart(
+            charts['product_hierarchy'] = viz.create_product_hierarchy_chart(
                 analytics.get('product_analysis', {})
             )
             
             # Bug analysis
-            charts['bug_analysis'] = self.visualizer.create_bug_analysis_chart(
+            charts['bug_analysis'] = viz.create_bug_analysis_chart(
                 analytics.get('bug_analysis', {})
             )
             
             # Engineer performance
-            charts['engineer_assignment'] = self.visualizer.create_engineer_assignment_chart(
+            charts['engineer_assignment'] = viz.create_engineer_assignment_chart(
                 analytics.get('engineer_assignment', {})
             )
             
             # Case owner assignment
-            charts['case_owner_assignment'] = self.visualizer.create_case_owner_assignment_chart(
+            charts['case_owner_assignment'] = viz.create_case_owner_assignment_chart(
                 analytics.get('case_owner_assignment', {})
             )
             
             # Internal vs External
-            charts['internal_external'] = self.visualizer.create_internal_external_chart(
+            charts['internal_external'] = viz.create_internal_external_chart(
                 analytics.get('internal_vs_external', {})
             )
             
             # Queue distribution
-            charts['queue_distribution'] = self.visualizer.create_queue_distribution_chart(
+            charts['queue_distribution'] = viz.create_queue_distribution_chart(
                 analytics.get('queue_analysis', {})
             )
             
@@ -202,8 +214,9 @@ class TACReportGenerator:
             logger.error(f"Failed to generate charts: {e}")
             # Return empty charts dict to prevent complete failure
             return {key: '<div class="warning">Chart generation failed</div>' for key in [
-                'summary_stats', 'monthly_trends', 'severity_distribution', 'product_hierarchy',
-                'bug_analysis', 'engineer_assignment', 'internal_external', 'queue_distribution'
+                'summary_stats', 'monthly_trends', 'severity_distribution', 'status_distribution', 
+                'product_hierarchy', 'bug_analysis', 'engineer_assignment', 'case_owner_assignment',
+                'internal_external', 'queue_distribution'
             ]}
     
     def _create_executive_summary(self, analytics: Dict[str, Any]) -> str:
