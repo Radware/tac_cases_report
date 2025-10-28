@@ -128,9 +128,15 @@ class TACReportGenerator:
             # Create executive summary
             executive_summary = self._create_executive_summary(analytics)
             
+            # Create table of contents
+            table_of_contents = self._create_table_of_contents(analytics)
+            
+            # Create bug cases table
+            bug_cases_table = self._create_bug_cases_table(analytics)
+            
             # Generate the HTML content
             html_content = self._create_html_content(
-                base_name, analytics, file_analysis, charts, executive_summary
+                base_name, analytics, file_analysis, charts, executive_summary, table_of_contents, bug_cases_table
             )
             
             # Write to file
@@ -285,13 +291,185 @@ class TACReportGenerator:
             logger.error(f"Failed to create executive summary: {e}")
             return '<div class="section"><h2>Executive Summary</h2><p>Error generating summary</p></div>'
     
+    def _create_bug_cases_table(self, analytics: Dict[str, Any]) -> str:
+        """
+        Create a table showing detailed information for bug cases.
+        
+        Args:
+            analytics: Complete analytics data
+            
+        Returns:
+            HTML string with bug cases table or empty string if no bug cases
+        """
+        try:
+            bug_data = analytics.get('bug_analysis', {})
+            
+            # Check if we have bug data and bug cases
+            if not bug_data.get('available') or not bug_data.get('bug_cases_details'):
+                return ""
+            
+            bug_cases_details = bug_data['bug_cases_details']
+            
+            if not bug_cases_details:
+                return ""
+            
+            # Start building the table HTML
+            table_html = """
+            <div class="section">
+                <h3>Bug Cases Details</h3>
+                <div class="data-summary">
+                    <table class="bug-cases-table">
+                        <thead>
+                            <tr>
+                                <th>Case Number</th>
+                                <th>TAC Case Subject</th>
+                                <th>Status</th>
+                                <th>Product</th>
+                                <th>Product Version</th>
+                                <th>BUG ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            """
+            
+            # Add rows for each bug case
+            for case in bug_cases_details:
+                case_number = str(case.get('case_number', 'N/A'))
+                subject = str(case.get('subject', 'N/A'))
+                status = str(case.get('status', 'N/A'))
+                product = str(case.get('product', 'N/A'))
+                product_version = str(case.get('product_version', 'N/A'))
+                bug_id = str(case.get('bug_id', 'N/A'))
+                
+                # Truncate long subjects for table display
+                if len(subject) > 50:
+                    subject = subject[:47] + "..."
+                
+                table_html += f"""
+                            <tr>
+                                <td>{case_number}</td>
+                                <td title="{str(case.get('subject', 'N/A'))}">{subject}</td>
+                                <td>{status}</td>
+                                <td>{product}</td>
+                                <td>{product_version}</td>
+                                <td>{bug_id}</td>
+                            </tr>
+                """
+            
+            table_html += """
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            """
+            
+            return table_html
+            
+        except Exception as e:
+            logger.error(f"Failed to create bug cases table: {e}")
+            return ""
+    
+    def _create_table_of_contents(self, analytics: Dict[str, Any]) -> str:
+        """
+        Create a table of contents for the report.
+        
+        Args:
+            analytics: Complete analytics data
+            
+        Returns:
+            HTML string with table of contents
+        """
+        try:
+            # Check which sections are available
+            sections = []
+            
+            # Always available sections
+            sections.append(("executive-summary", "Executive Summary"))
+            sections.append(("key-metrics", "Key Performance Metrics"))
+            
+            # Monthly trends
+            monthly_data = analytics.get('monthly_trends', {})
+            if monthly_data.get('available'):
+                sections.append(("monthly-trends", "Monthly Case Volume Trends"))
+            
+            # Severity analysis
+            severity_data = analytics.get('severity_analysis', {})
+            if severity_data.get('available'):
+                sections.append(("severity-analysis", "Case Severity Distribution"))
+            
+            # Status analysis
+            status_data = analytics.get('status_analysis', {})
+            if status_data.get('available'):
+                sections.append(("status-analysis", "Case Status Distribution"))
+            
+            # Product analysis
+            product_data = analytics.get('product_analysis', {})
+            if product_data.get('available'):
+                sections.append(("product-analysis", "Product Hierarchy Analysis"))
+            
+            # Bug analysis
+            bug_data = analytics.get('bug_analysis', {})
+            if bug_data.get('available'):
+                sections.append(("bug-analysis", "Bug-Related Case Analysis"))
+            
+            # Engineer assignment
+            engineer_data = analytics.get('engineer_assignment', {})
+            if engineer_data.get('available'):
+                sections.append(("engineer-assignment", "Engineer Case Distribution"))
+            
+            # Case owner assignment
+            case_owner_data = analytics.get('case_owner_assignment', {})
+            if case_owner_data.get('available'):
+                sections.append(("case-owner-assignment", "Case Owner Distribution"))
+            
+            # Internal vs External
+            internal_external_data = analytics.get('internal_vs_external', {})
+            if internal_external_data.get('available'):
+                sections.append(("internal-external", "Internal vs External Cases"))
+            
+            # Queue analysis
+            queue_data = analytics.get('queue_analysis', {})
+            if queue_data.get('available'):
+                sections.append(("queue-analysis", "Queue Distribution"))
+            
+            # Build table of contents HTML
+            toc_html = """
+            <div class="section" id="table-of-contents">
+                <h2>Table of Contents</h2>
+                <div class="toc-container">
+                    <nav class="toc-nav">
+                        <ol class="toc-list">
+            """
+            
+            for section_id, section_title in sections:
+                toc_html += f"""
+                            <li class="toc-item">
+                                <a href="#{section_id}" class="toc-link">{section_title}</a>
+                            </li>
+                """
+            
+            toc_html += """
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+            """
+            
+            return toc_html
+            
+        except Exception as e:
+            logger.error(f"Failed to create table of contents: {e}")
+            return ""
+    
     def _create_html_content(
         self,
         base_name: str,
         analytics: Dict[str, Any],
         file_analysis: Dict[str, Any],
         charts: Dict[str, str],
-        executive_summary: str
+        executive_summary: str,
+        table_of_contents: str,
+        bug_cases_table: str
     ) -> str:
         """
         Create the complete HTML content for the report.
@@ -302,6 +480,8 @@ class TACReportGenerator:
             file_analysis: File analysis information
             charts: Dictionary of chart HTML strings
             executive_summary: Executive summary HTML
+            table_of_contents: Table of contents HTML
+            bug_cases_table: Bug cases table HTML
             
         Returns:
             Complete HTML content string
@@ -329,17 +509,22 @@ class TACReportGenerator:
         </div>
         
         <div class="content">
+            <!-- Table of Contents -->
+            {table_of_contents}
+            
             <!-- Executive Summary -->
-            {executive_summary}
+            <div id="executive-summary">
+                {executive_summary}
+            </div>
             
             <!-- Key Metrics -->
-            <div class="section">
+            <div class="section" id="key-metrics">
                 <h2>Key Performance Metrics</h2>
                 {charts['summary_stats']}
             </div>
             
             <!-- Monthly Trends -->
-            <div class="section">
+            <div class="section" id="monthly-trends">
                 <h2>Monthly Case Volume Trends</h2>
                 <div class="chart-container">
                     {charts['monthly_trends']}
@@ -351,7 +536,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Severity Analysis -->
-            <div class="section">
+            <div class="section" id="severity-analysis">
                 <h2>Case Severity Distribution</h2>
                 <div class="chart-container">
                     {charts['severity_distribution']}
@@ -363,7 +548,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Status Analysis -->
-            <div class="section">
+            <div class="section" id="status-analysis">
                 <h2>Case Status Distribution</h2>
                 <div class="chart-container">
                     {charts['status_distribution']}
@@ -375,7 +560,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Product Analysis -->
-            <div class="section">
+            <div class="section" id="product-analysis">
                 <h2>Product Hierarchy Analysis</h2>
                 <div class="chart-container">
                     {charts['product_hierarchy']}
@@ -387,19 +572,16 @@ class TACReportGenerator:
             </div>
             
             <!-- Bug Analysis -->
-            <div class="section">
+            <div class="section" id="bug-analysis">
                 <h2>Bug-Related Case Analysis</h2>
                 <div class="chart-container">
                     {charts['bug_analysis']}
                 </div>
-                <p class="chart-description">
-                    Understanding the proportion of bug-related cases helps assess product quality 
-                    and the effectiveness of quality assurance processes.
-                </p>
+                {bug_cases_table}
             </div>
             
             <!-- Engineer Performance -->
-            <div class="section">
+            <div class="section" id="engineer-assignment">
                 <h2>Engineer Case Distribution</h2>
                 <div class="chart-container">
                     {charts['engineer_assignment']}
@@ -411,7 +593,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Case Owner Assignment -->
-            <div class="section">
+            <div class="section" id="case-owner-assignment">
                 <h2>Case Owner Distribution</h2>
                 <div class="chart-container">
                     {charts['case_owner_assignment']}
@@ -423,7 +605,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Internal vs External -->
-            <div class="section">
+            <div class="section" id="internal-external">
                 <h2>Internal vs External Cases</h2>
                 <div class="chart-container">
                     {charts['internal_external']}
@@ -435,7 +617,7 @@ class TACReportGenerator:
             </div>
             
             <!-- Queue Analysis -->
-            <div class="section">
+            <div class="section" id="queue-analysis">
                 <h2>Queue Distribution</h2>
                 <div class="chart-container">
                     {charts['queue_distribution']}
@@ -513,47 +695,29 @@ class TACReportGenerator:
                 return output_path
                 
             except ImportError:
-                logger.warning("Playwright not available, trying WeasyPrint...")
+                logger.error("Playwright not available - this is required for PDF generation with JavaScript charts")
                 
-                # Try WeasyPrint as fallback
-                try:
-                    import weasyprint
-                    
-                    with open(html_path, 'r', encoding='utf-8') as f:
-                        html_content = f.read()
-                    
-                    # Generate PDF
-                    html_doc = weasyprint.HTML(string=html_content, base_url=str(html_path.parent))
-                    html_doc.write_pdf(str(output_path))
-                    
-                    logger.info(f"Generated PDF using WeasyPrint: {output_path}")
-                    return output_path
-                    
-                except ImportError:
-                    logger.error("No PDF generation library available (Playwright or WeasyPrint)")
-                    
-                    # Create a text file with instructions instead
-                    instructions_path = self.output_dir / f"{base_name}_pdf_instructions.txt"
-                    
-                    with open(instructions_path, 'w') as f:
-                        f.write(f"""
+                # Create a text file with instructions instead
+                instructions_path = self.output_dir / f"{base_name}_pdf_instructions.txt"
+                
+                with open(instructions_path, 'w') as f:
+                    f.write(f"""
 PDF Generation Instructions
 ===========================
 
-To generate a PDF from the HTML report, you can:
+To generate a PDF from the HTML report, you need to install Playwright:
 
 1. Install Playwright:
    pip install playwright
    playwright install chromium
 
-2. Or install WeasyPrint:
-   pip install weasyprint
-
 Then re-run the report generation.
+
+Note: WeasyPrint and other PDF libraries cannot render JavaScript-based 
+Plotly charts, so Playwright (or similar browser-based solution) is required.
 
 Alternatively, you can:
 - Open the HTML file in a web browser and use Print to PDF
-- Use online HTML to PDF conversion services
 
 HTML Report Location: {html_path}
 """)

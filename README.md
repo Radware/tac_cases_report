@@ -25,14 +25,11 @@ This tool generates TAC cases interactive report with charts and insights from c
 pip install -r requirements.txt
 ```
 
-For PDF generation (optional):
+For PDF generation:
 ```bash
-# For Playwright (recommended)
+# Playwright is required for JavaScript chart rendering
 pip install playwright
 playwright install chromium
-
-# OR for WeasyPrint (alternative)
-pip install weasyprint
 ```
 
 ## 🎯 Quick Start
@@ -163,7 +160,7 @@ COLOR_PALETTES = {
 - The tool will attempt to find alternative column names automatically
 
 **"PDF generation failed"**
-- Install Playwright or WeasyPrint (see Installation section)
+- Install Playwright (see Installation section) - this is required for JavaScript chart rendering
 - HTML reports will still be generated successfully
 
 **Memory issues with large files**
@@ -188,6 +185,10 @@ The generated reports include:
 
 ## Version control
 
+V0.2.4 
+    Removed WeasyPrint support (incompatible with JS charts), cleaned up PDF generation to use Playwright only
+    Added detailed bug cases table under Bug Analysis chart with case details (Case Number, Subject, Status, Product, Product Version, Bug ID)
+    Added interactive table of contents with clickable navigation links in both HTML and PDF reports
 V0.2.3 Improved coloring scheme, improved Bugs chart layout for PDF
 V0.2.2 Fixed PDF export to properly export charts and fit them to PDF page
 V0.2.1 Updated README.md

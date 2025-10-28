@@ -154,6 +154,7 @@ CHART_COLOR_ASSIGNMENTS = {
 # PDF-SPECIFIC CONFIGURATION - USER CUSTOMIZABLE
 # ============================================================================
 # Special configurations for PDF reports to ensure charts fit properly on pages
+# NOTE: PDF generation requires Playwright to render JavaScript-based Plotly charts
 
 # PDF Chart dimensions (smaller than HTML to fit better on PDF pages)
 PDF_CHART_DIMENSIONS = {
@@ -296,6 +297,10 @@ CHART_PLOTLYJS_MODE = 'cdn'  # Options: 'cdn', 'inline', 'directory'
 REPORT_CSS = """
 <style>
 /* TAC Executive Report Styling */
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
@@ -363,6 +368,61 @@ body {
     margin-top: 30px;
     margin-bottom: 15px;
     font-size: 1.3em;
+}
+
+/* Table of Contents styling */
+.toc-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 30px;
+    margin: 20px 0;
+    box-shadow: 0 4px 15px rgba(0,63,127,0.1);
+}
+
+.toc-nav {
+    max-width: 100%;
+}
+
+.toc-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.toc-item {
+    margin: 0;
+    padding: 0;
+}
+
+.toc-link {
+    display: block;
+    padding: 15px 20px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #003f7f;
+    font-weight: 500;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.toc-link:hover {
+    background: #003f7f;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,63,127,0.2);
+}
+
+.toc-link:focus {
+    outline: 2px solid #6cb2eb;
+    outline-offset: 2px;
 }
 
 .executive-summary {
@@ -501,6 +561,70 @@ body {
     border-bottom: none;
 }
 
+/* Bug cases table */
+.bug-cases-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-top: 20px;
+}
+
+.bug-cases-table th {
+    background: #003f7f;
+    color: white;
+    padding: 12px 15px;
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 2px solid #002a5c;
+}
+
+.bug-cases-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+
+.bug-cases-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.bug-cases-table tr:last-child td {
+    border-bottom: none;
+}
+
+.bug-cases-table th:first-child,
+.bug-cases-table td:first-child {
+    width: 12%;
+}
+
+.bug-cases-table th:nth-child(2),
+.bug-cases-table td:nth-child(2) {
+    width: 35%;
+}
+
+.bug-cases-table th:nth-child(3),
+.bug-cases-table td:nth-child(3) {
+    width: 10%;
+}
+
+.bug-cases-table th:nth-child(4),
+.bug-cases-table td:nth-child(4) {
+    width: 15%;
+}
+
+.bug-cases-table th:nth-child(5),
+.bug-cases-table td:nth-child(5) {
+    width: 13%;
+}
+
+.bug-cases-table th:nth-child(6),
+.bug-cases-table td:nth-child(6) {
+    width: 15%;
+}
+
 /* Footer */
 .footer {
     background: #003f7f;
@@ -578,6 +702,33 @@ body {
         background: #003f7f !important;
         -webkit-print-color-adjust: exact;
         color-adjust: exact;
+    }
+    
+    /* Compact table of contents for PDF */
+    .toc-container {
+        padding: 15px;
+        margin: 10px 0;
+        page-break-inside: avoid;
+    }
+    
+    .toc-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin: 0;
+    }
+    
+    .toc-link {
+        padding: 8px 12px;
+        font-size: 0.85em;
+        font-weight: 400;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: none;
+    }
+    
+    .toc-link:hover {
+        transform: none;
+        box-shadow: none;
     }
     
     .section {

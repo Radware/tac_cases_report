@@ -463,7 +463,8 @@ class TACDataProcessor:
             'available': False,
             'bug_vs_non_bug': {},
             'bug_types': {},
-            'bug_severity': {}
+            'bug_severity': {},
+            'bug_cases_details': []
         }
         
         if 'experienced_bug' not in self.column_mapping:
@@ -473,6 +474,7 @@ class TACDataProcessor:
         bug_cases = 0
         non_bug_cases = 0
         bug_types = defaultdict(int)
+        bug_cases_details = []
         
         for _, row in self.data.iterrows():
             bug_value = clean_text(str(row.get(bug_col, '')))
@@ -484,6 +486,17 @@ class TACDataProcessor:
                 bug_type = self._extract_bug_type(bug_value)
                 if bug_type:
                     bug_types[bug_type] += 1
+                
+                # Collect bug case details for table
+                bug_case_detail = {
+                    'case_number': row.get(self.column_mapping.get('reference', ''), 'N/A'),
+                    'subject': row.get(self.column_mapping.get('subject', ''), 'N/A'),
+                    'status': row.get(self.column_mapping.get('status', ''), 'N/A'),
+                    'product': row.get(self.column_mapping.get('product_hierarchy', ''), 'N/A'),
+                    'product_version': row.get(self.column_mapping.get('product_version', ''), 'N/A'),
+                    'bug_id': bug_value
+                }
+                bug_cases_details.append(bug_case_detail)
             else:
                 non_bug_cases += 1
         
@@ -502,6 +515,7 @@ class TACDataProcessor:
             },
             'bug_types': dict(bug_types),
             'bug_severity': bug_severity,
+            'bug_cases_details': bug_cases_details,
             'bug_percentage': round((bug_cases / (bug_cases + non_bug_cases)) * 100, 1) if (bug_cases + non_bug_cases) > 0 else 0
         }
     
