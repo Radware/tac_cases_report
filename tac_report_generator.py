@@ -213,6 +213,21 @@ class TACReportGenerator:
                 analytics.get('queue_analysis', {})
             )
             
+            # Escalation
+            charts['escalation'] = viz.create_escalation_chart(
+                analytics.get('escalation', {})
+            )
+            
+            # Category
+            charts['category'] = viz.create_category_chart(
+                analytics.get('category_analysis', {})
+            )
+            
+            # Resolution
+            charts['resolution'] = viz.create_resolution_chart(
+                analytics.get('resolution_analysis', {})
+            )
+            
             logger.debug(f"Generated {len(charts)} charts")
             return charts
             
@@ -222,7 +237,7 @@ class TACReportGenerator:
             return {key: '<div class="warning">Chart generation failed</div>' for key in [
                 'summary_stats', 'monthly_trends', 'severity_distribution', 'status_distribution', 
                 'product_hierarchy', 'bug_analysis', 'engineer_assignment', 'case_owner_assignment',
-                'internal_external', 'queue_distribution'
+                'internal_external', 'queue_distribution', 'escalation', 'category', 'resolution'
             ]}
     
     def _create_executive_summary(self, analytics: Dict[str, Any]) -> str:
@@ -432,6 +447,15 @@ class TACReportGenerator:
             if queue_data.get('available'):
                 sections.append(("queue-analysis", "Queue Distribution"))
             
+            # Escalation - Always include this section
+            sections.append(("escalation", "Case Escalation"))
+            
+            # Category - Always include this section
+            sections.append(("category", "Case Category"))
+            
+            # Resolution - Always include this section
+            sections.append(("resolution", "Case Resolution"))
+            
             # Build table of contents HTML
             toc_html = """
             <div class="section" id="table-of-contents">
@@ -625,6 +649,40 @@ class TACReportGenerator:
                 <p class="chart-description">
                     Queue distribution shows how cases are distributed across different support teams, 
                     enabling optimization of team structures and specialization areas.
+                </p>
+            </div>
+            
+            <!-- Escalation Analysis -->
+            <div class="section" id="escalation">
+                <h2>Case Escalation</h2>
+                <div class="chart-container">
+                    {charts['escalation']}
+                </div>
+                <p class="chart-description">
+                    "Escalated" cases are cases that have been escalated to higher support levels (e.g. TAC to Tier4), 
+                    "TopN" implies that it is already an "Escalated" case.
+                </p>
+            </div>
+            
+            <!-- Category Analysis -->
+            <div class="section" id="category">
+                <h2>Case Category</h2>
+                <div class="chart-container">
+                    {charts['category']}
+                </div>
+                <p class="chart-description">
+                    Category distribution shows the types of issues being reported.
+                </p>
+            </div>
+            
+            <!-- Resolution Analysis -->
+            <div class="section" id="resolution">
+                <h2>Case Resolution</h2>
+                <div class="chart-container">
+                    {charts['resolution']}
+                </div>
+                <p class="chart-description">
+                    Resolution distribution shows how cases are being resolved.
                 </p>
             </div>
         </div>

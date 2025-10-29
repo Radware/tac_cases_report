@@ -7,7 +7,7 @@ modifying the core code.
 """
 
 # Output format configuration
-OUTPUT_FORMATS = ['pdf','html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
+OUTPUT_FORMATS = ['html']  # Available options: 'html', 'pdf'. Use ['html'] for HTML only, ['pdf'] for PDF only, or ['html', 'pdf'] for both
 
 
 # ============================================================================
@@ -145,7 +145,41 @@ CHART_COLOR_ASSIGNMENTS = {
     #     'Internal': '#003f7f',       # Radware blue for internal
     #     'External': '#6cb2eb'        # Light blue for external
     # },
-    
+
+
+    # Escalation colors (optional: override automatic colors for escalation categories)
+    # 'escalation_colors': {
+    #     'Not Escalated': '#28a745',        # Green for non-escalated cases
+    #     'Escalated': '#ffc107',             # Yellow for escalated cases
+    #     'Escalated TopN': '#dc3545',       # Red for TopN escalated cases
+    # },
+
+    # Option: Use a different color palette for escalation
+    # 'escalation_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
+
+    # Category colors (optional: override automatic colors for category values)
+    # 'category_colors': {
+    #     'Upgrade/Downgrade/Install': '#28a745',     # Green for maintenance activities
+    #     'Layer 3 (IPv4)': '#dc3545',               # Red for network issues
+    #     'Bug/Defect': '#ffc107',                    # Yellow for bugs
+    #     # Add more categories as needed
+    # },
+
+    # Option: Use a different color palette for category
+    # 'category_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
+
+    # Resolution colors (optional: override automatic colors for resolution types)
+    # 'resolution_colors': {
+    #     'Planned Activity Completed': '#28a745',    # Green for successful completion
+    #     'Explanations Provided': '#17a2b8',        # Blue for informational
+    #     'Workaround Provided': '#ffc107',          # Yellow for temporary fix
+    #     'Bug Reported': '#dc3545',                 # Red for bugs
+    #     # Add more resolution codes as needed
+    # },
+
+    # Option: Use a different color palette for resolution
+    # 'resolution_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
+
 
 }
 
@@ -207,6 +241,9 @@ CHART_TYPES = {
     'internal_external': 'pie',
     'queue_distribution': 'pie',
     'status_distribution': 'pie',
+    'escalation': 'pie',
+    'category': 'pie',
+    'resolution': 'pie',
 
     # Assignment charts (for ranking/comparison data)
     # Options: 'bar', 'horizontal_bar'

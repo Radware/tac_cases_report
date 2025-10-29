@@ -185,6 +185,11 @@ The generated reports include:
 
 ## Version control
 
+V0.2.5 
+    Added Case Escalation Distribution chart
+    Added TopN and TTR as Key Performance Metrics
+    Added cases by Category chart
+    Added cases by Resolution chart
 V0.2.4 
     Removed WeasyPrint support (incompatible with JS charts), cleaned up PDF generation to use Playwright only
     Added detailed bug cases table under Bug Analysis chart with case details (Case Number, Subject, Status, Product, Product Version, Bug ID)

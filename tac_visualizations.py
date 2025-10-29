@@ -286,7 +286,7 @@ class TACVisualizer:
                     color='#2c3e50'  # Dark text outside
                 ),
                 pull=[0.01] * len(labels),  # Slightly separate all slices for 3D effect
-                domain=dict(x=[0.0, 0.65], y=[0.1, 0.9]),  # Fixed pie chart position - consistent for all pies
+                domain=dict(x=[0.0, 0.60], y=[0.1, 0.9]),  # Fixed pie chart position - consistent for all pies
                 hovertemplate='<b>%{label}</b><br>' +
                              'Cases: <b>%{value}</b><br>' +
                              'Percentage: <b>%{percent}</b><br>' +
@@ -363,7 +363,7 @@ class TACVisualizer:
                     yanchor='top',
                     y=0.9,
                     xanchor='left',
-                    x=0.67,  # Fixed legend position - consistent for all pies
+                    x=0.85,  # Fixed legend position - moved farther right to prevent overlap
                     bgcolor='rgba(255,255,255,0.8)',
                     bordercolor='#e1e8ed',
                     borderwidth=1,
@@ -507,6 +507,152 @@ class TACVisualizer:
         except Exception as e:
             logger.error(f"Failed to create status distribution chart: {e}")
             return self._create_error_message("Status Distribution Chart")
+
+    def create_escalation_chart(self, escalation_data: Dict[str, Any]) -> str:
+        """
+        Create escalation distribution chart with configurable chart type.
+        
+        Args:
+            escalation_data: Escalation analysis data
+            
+        Returns:
+            HTML string with chart
+        """
+        if not escalation_data.get('available') or not escalation_data.get('counts'):
+            return self._create_not_available_message("Escalation Distribution", 
+                escalation_data.get('reason', 'No data available'))
+        
+        try:
+            from tac_config import CHART_TYPES
+            
+            counts = escalation_data['counts']
+            chart_type = CHART_TYPES.get('escalation', 'pie')
+            
+            # Sort by escalation priority: Not Escalated, Escalated, Escalated TopN
+            escalation_order = ['Not Escalated', 'Escalated', 'Escalated TopN']
+            labels = []
+            values = []
+            
+            for escalation_type in escalation_order:
+                if escalation_type in counts and counts[escalation_type] > 0:
+                    labels.append(escalation_type)
+                    values.append(counts[escalation_type])
+            
+            # Get colors for escalation types
+            colors = self._get_escalation_colors(labels)
+            
+            fig = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Case Escalation Distribution',
+                div_id='escalation_chart'
+            )
+            
+            return fig.to_html(
+                include_plotlyjs=CHART_PLOTLYJS_MODE,
+                div_id="escalation_chart",
+                config=CHART_CONFIG
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create escalation chart: {e}")
+            return self._create_error_message("Escalation Chart")
+
+    def create_category_chart(self, category_data: Dict[str, Any]) -> str:
+        """
+        Create category distribution chart with configurable chart type.
+        
+        Args:
+            category_data: Category analysis data
+            
+        Returns:
+            HTML string with chart
+        """
+        if not category_data.get('available') or not category_data.get('counts'):
+            return self._create_not_available_message("Category Distribution", 
+                category_data.get('reason', 'No data available'))
+        
+        try:
+            from tac_config import CHART_TYPES
+            
+            counts = category_data['counts']
+            chart_type = CHART_TYPES.get('category', 'pie')
+            
+            # Sort by count (descending)
+            sorted_items = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+            labels = [item[0] for item in sorted_items]
+            values = [item[1] for item in sorted_items]
+            
+            # Get colors for categories
+            colors = self._get_category_colors(labels)
+            
+            fig = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Case Distribution by Category',
+                div_id='category_chart'
+            )
+            
+            return fig.to_html(
+                include_plotlyjs=CHART_PLOTLYJS_MODE,
+                div_id="category_chart",
+                config=CHART_CONFIG
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create category chart: {e}")
+            return self._create_error_message("Category Chart")
+
+    def create_resolution_chart(self, resolution_data: Dict[str, Any]) -> str:
+        """
+        Create resolution distribution chart with configurable chart type.
+        
+        Args:
+            resolution_data: Resolution analysis data
+            
+        Returns:
+            HTML string with chart
+        """
+        if not resolution_data.get('available') or not resolution_data.get('counts'):
+            return self._create_not_available_message("Resolution Distribution", 
+                resolution_data.get('reason', 'No data available'))
+        
+        try:
+            from tac_config import CHART_TYPES
+            
+            counts = resolution_data['counts']
+            chart_type = CHART_TYPES.get('resolution', 'pie')
+            
+            # Sort by count (descending)
+            sorted_items = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+            labels = [item[0] for item in sorted_items]
+            values = [item[1] for item in sorted_items]
+            
+            # Get colors for resolutions
+            colors = self._get_resolution_colors(labels)
+            
+            fig = self._create_distribution_chart(
+                labels=labels,
+                values=values,
+                colors=colors,
+                chart_type=chart_type,
+                title='Case Distribution by Resolution',
+                div_id='resolution_chart'
+            )
+            
+            return fig.to_html(
+                include_plotlyjs=CHART_PLOTLYJS_MODE,
+                div_id="resolution_chart",
+                config=CHART_CONFIG
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to create resolution chart: {e}")
+            return self._create_error_message("Resolution Chart")
 
     def create_product_hierarchy_chart(self, product_data: Dict[str, Any]) -> str:
         """
@@ -1087,11 +1233,20 @@ class TACVisualizer:
             total_cases = summary.get('total_cases', 0)
             cases_per_month = summary.get('cases_per_month', 0)
             
+            # TopN cases from escalation analysis
+            escalation_data = analytics.get('escalation', {})
+            topn_cases = 0
+            if escalation_data.get('available') and escalation_data.get('counts'):
+                topn_cases = escalation_data['counts'].get('Escalated TopN', 0)
+            
             # Bug analysis - get total count instead of percentage
             bug_data = analytics.get('bug_analysis', {})
             bug_total = 0
             if bug_data.get('available') and bug_data.get('bug_vs_non_bug'):
                 bug_total = bug_data['bug_vs_non_bug'].get('Bug Cases', 0)
+            
+            # TTR (Time to Resolution)
+            ttr = summary.get('average_ttr', 'N/A')
             
             cards_html = f"""
             <div class="stats-grid">
@@ -1100,12 +1255,20 @@ class TACVisualizer:
                     <div class="stat-label">Total Cases</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">{cases_per_month:.1f}</div>
-                    <div class="stat-label">Cases per Month</div>
+                    <div class="stat-number">{topn_cases}</div>
+                    <div class="stat-label">TopN Cases</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">{bug_total}</div>
                     <div class="stat-label">Bug-Related Cases</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{ttr}</div>
+                    <div class="stat-label">TTR (Time to Resolution)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{cases_per_month:.1f}</div>
+                    <div class="stat-label">Average Cases per Month</div>
                 </div>
             </div>
             """
@@ -1159,6 +1322,105 @@ class TACVisualizer:
             else:
                 # Use color from the status palette (cycling through if needed)
                 colors.append(status_palette[i % len(status_palette)])
+        
+        return colors
+    
+    def _get_escalation_colors(self, escalation_categories: List[str]) -> List[str]:
+        """
+        Get colors for escalation categories using palette override or explicit colors.
+        
+        Args:
+            escalation_categories: List of escalation category values
+            
+        Returns:
+            List of color codes for each escalation category
+        """
+        from tac_config import COLOR_PALETTES
+        
+        # Get escalation-specific color configurations
+        escalation_colors = self.color_assignments.get('escalation_colors', {})
+        escalation_palette_name = self.color_assignments.get('escalation_color_palette')
+        
+        # Use escalation-specific palette if specified, otherwise use default
+        if escalation_palette_name and escalation_palette_name in COLOR_PALETTES:
+            escalation_palette = COLOR_PALETTES[escalation_palette_name]
+        else:
+            escalation_palette = self.chart_colors
+        
+        colors = []
+        for i, category in enumerate(escalation_categories):
+            # First check if there's an explicit color defined for this escalation category
+            if category in escalation_colors:
+                colors.append(escalation_colors[category])
+            else:
+                # Use color from the escalation palette (cycling through if needed)
+                colors.append(escalation_palette[i % len(escalation_palette)])
+        
+        return colors
+    
+    def _get_category_colors(self, categories: List[str]) -> List[str]:
+        """
+        Get colors for category values using palette override or explicit colors.
+        
+        Args:
+            categories: List of category values
+            
+        Returns:
+            List of color codes for each category
+        """
+        from tac_config import COLOR_PALETTES
+        
+        # Get category-specific color configurations
+        category_colors = self.color_assignments.get('category_colors', {})
+        category_palette_name = self.color_assignments.get('category_color_palette')
+        
+        # Use category-specific palette if specified, otherwise use default
+        if category_palette_name and category_palette_name in COLOR_PALETTES:
+            category_palette = COLOR_PALETTES[category_palette_name]
+        else:
+            category_palette = self.chart_colors
+        
+        colors = []
+        for i, category in enumerate(categories):
+            # First check if there's an explicit color defined for this category
+            if category in category_colors:
+                colors.append(category_colors[category])
+            else:
+                # Use color from the category palette (cycling through if needed)
+                colors.append(category_palette[i % len(category_palette)])
+        
+        return colors
+    
+    def _get_resolution_colors(self, resolutions: List[str]) -> List[str]:
+        """
+        Get colors for resolution values using palette override or explicit colors.
+        
+        Args:
+            resolutions: List of resolution values
+            
+        Returns:
+            List of color codes for each resolution
+        """
+        from tac_config import COLOR_PALETTES
+        
+        # Get resolution-specific color configurations
+        resolution_colors = self.color_assignments.get('resolution_colors', {})
+        resolution_palette_name = self.color_assignments.get('resolution_color_palette')
+        
+        # Use resolution-specific palette if specified, otherwise use default
+        if resolution_palette_name and resolution_palette_name in COLOR_PALETTES:
+            resolution_palette = COLOR_PALETTES[resolution_palette_name]
+        else:
+            resolution_palette = self.chart_colors
+        
+        colors = []
+        for i, resolution in enumerate(resolutions):
+            # First check if there's an explicit color defined for this resolution
+            if resolution in resolution_colors:
+                colors.append(resolution_colors[resolution])
+            else:
+                # Use color from the resolution palette (cycling through if needed)
+                colors.append(resolution_palette[i % len(resolution_palette)])
         
         return colors
     

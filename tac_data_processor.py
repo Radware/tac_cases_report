@@ -60,7 +60,10 @@ class TACDataProcessor:
             'severity': ['Severity', 'Priority', 'Urgency'],
             'jira_bug': ['Jira Bug', 'Bug', 'Bug ID'],
             'experienced_bug': ['Experienced Bug', 'Known Bug', 'Bug Found'],
-            'related_case': ['Similar/Related Case', 'Related Cases', 'Similar Cases']
+            'related_case': ['Similar/Related Case', 'Related Cases', 'Similar Cases'],
+            'category': ['Category', 'Case Category', 'Issue Category'],
+            'resolution_code_1': ['Resolution Code 1', 'Resolution Code', 'Primary Resolution'],
+            'resolution_time': ['Resolution Time', 'Resolution Time ', 'Time to Resolution', 'TTR']
         }
         
         logger.info(f"Initializing TAC processor for {self.file_path.name}")
@@ -121,11 +124,23 @@ class TACDataProcessor:
             skip_rows = 0
             if len(lines) > 1:
                 first_line = lines[0].strip().strip('"')
+                second_line = lines[1].strip().strip('"') if len(lines) > 1 else ""
                 
-                # If first line doesn't look like headers but second does, skip first
-                if (',' not in first_line or 
-                    first_line.lower() in ['open cases all', 'all cases', 'case report']):
+                # Check if first line starts with common title patterns
+                first_part = first_line.split(',')[0].strip().lower()
+                
+                logger.debug(f"CSV header detection - First line: {first_line[:100]}")
+                logger.debug(f"CSV header detection - First part: '{first_part}'")
+                logger.debug(f"CSV header detection - Second line: {second_line[:100]}")
+                
+                # If first line looks like a title and second line has proper headers
+                if (first_part in ['open cases all', 'all cases', 'case report', 'tac cases'] or
+                    (first_part and not any(header in first_line.lower() for header in ['reference', 'subject', 'status', 'date']) and
+                     any(header in second_line.lower() for header in ['reference', 'subject', 'status', 'date']))):
                     skip_rows = 1
+                    logger.debug(f"CSV header detection - Skipping first row (skip_rows = {skip_rows})")
+                else:
+                    logger.debug(f"CSV header detection - Using first row as headers (skip_rows = {skip_rows})")
             
             # Load with pandas for better handling of mixed data types
             try:
@@ -220,13 +235,13 @@ class TACDataProcessor:
     
     def _create_column_mapping(self):
         """Create mapping from expected columns to actual columns."""
-        actual_columns = [col.strip() for col in self.data.columns]
+        actual_columns = self.data.columns.tolist()  # Keep original column names
         
         for standard_name, variants in self.expected_columns.items():
             for variant in variants:
                 for actual_col in actual_columns:
-                    if actual_col.lower() == variant.lower():
-                        self.column_mapping[standard_name] = actual_col
+                    if actual_col.strip().lower() == variant.lower():  # Compare stripped versions
+                        self.column_mapping[standard_name] = actual_col  # But map to original
                         break
                 if standard_name in self.column_mapping:
                     break
@@ -346,6 +361,9 @@ class TACDataProcessor:
             'engineer_assignment': self._get_engineer_assignment(),
             'case_owner_assignment': self._get_case_owner_assignment(),
             'status_analysis': self._get_status_analysis(),
+            'escalation': self._get_escalation_analysis(),
+            'category_analysis': self._get_category_analysis(),
+            'resolution_analysis': self._get_resolution_analysis(),
             'response_times': self._get_response_time_analysis()
         }
         
@@ -369,12 +387,16 @@ class TACDataProcessor:
             months = ((date_range['end'] - date_range['start']).days + 1) / 30.44
             cases_per_month = total_cases / max(months, 1)
         
+        # Calculate TTR (Time to Resolution)
+        ttr_formatted = self._calculate_average_ttr()
+        
         return {
             'total_cases': total_cases,
             'date_range': date_range,
             'status_breakdown': status_counts,
             'cases_per_month': round(cases_per_month, 1),
-            'avg_cases_per_day': round(total_cases / max(date_range.get('days', 1), 1), 1)
+            'avg_cases_per_day': round(total_cases / max(date_range.get('days', 1), 1), 1),
+            'average_ttr': ttr_formatted
         }
     
     def _get_monthly_trends(self) -> Dict[str, Any]:
@@ -629,6 +651,47 @@ class TACDataProcessor:
             'counts': status_counts
         }
 
+    def _get_escalation_analysis(self) -> Dict[str, Any]:
+        """Analyze case escalation patterns."""
+        if 'jira_case' not in self.column_mapping:
+            return {'available': False, 'reason': 'No Jira Case column found.'}
+        
+        jira_col = self.column_mapping['jira_case']
+        escalation_counts = {
+            'Not Escalated': 0,
+            'Escalated': 0,
+            'Escalated TopN': 0
+        }
+        
+        for _, row in self.data.iterrows():
+            jira_value = clean_text(str(row.get(jira_col, '')))
+            
+            # Check escalation status
+            if self._is_no_value(jira_value):
+                escalation_counts['Not Escalated'] += 1
+            elif 'topn' in jira_value.lower():
+                escalation_counts['Escalated TopN'] += 1
+            else:
+                escalation_counts['Escalated'] += 1
+        
+        return {
+            'available': True,
+            'counts': escalation_counts
+        }
+
+    def _is_no_value(self, value: str) -> bool:
+        """Check if a value represents 'no value' or empty."""
+        if not value:
+            return True
+        
+        value_lower = value.lower().strip()
+        no_value_indicators = [
+            'no value', 'n/a', 'na', 'none', 'null', 'empty', 
+            '', 'no data', 'not available', 'not applicable'
+        ]
+        
+        return value_lower in no_value_indicators
+
     def _get_engineer_assignment(self) -> Dict[str, Any]:
         """Analyze engineer performance metrics."""
         if 'assigned_account' not in self.column_mapping:
@@ -683,3 +746,100 @@ class TACDataProcessor:
             }
         
         return {'available': False, 'reason': 'No valid response time data found'}
+
+    def _get_category_analysis(self) -> Dict[str, Any]:
+        """Analyze case distribution by category."""
+        if 'category' not in self.column_mapping:
+            return {'available': False, 'reason': 'No Category column found'}
+        
+        category_col = self.column_mapping['category']
+        category_counts = {}
+        
+        for _, row in self.data.iterrows():
+            category = clean_text(str(row.get(category_col, '')))
+            if category and category != 'N/A':
+                category_counts[category] = category_counts.get(category, 0) + 1
+        
+        if not category_counts:
+            return {'available': False, 'reason': 'No valid category data found'}
+        
+        return {
+            'available': True,
+            'counts': category_counts
+        }
+
+    def _get_resolution_analysis(self) -> Dict[str, Any]:
+        """Analyze case distribution by resolution code."""
+        if 'resolution_code_1' not in self.column_mapping:
+            return {'available': False, 'reason': 'No Resolution Code 1 column found'}
+        
+        resolution_col = self.column_mapping['resolution_code_1']
+        resolution_counts = {}
+        
+        for _, row in self.data.iterrows():
+            resolution = clean_text(str(row.get(resolution_col, '')))
+            if resolution and resolution != 'N/A':
+                resolution_counts[resolution] = resolution_counts.get(resolution, 0) + 1
+        
+        if not resolution_counts:
+            return {'available': False, 'reason': 'No valid resolution data found'}
+        
+        return {
+            'available': True,
+            'counts': resolution_counts
+        }
+
+    def _calculate_average_ttr(self) -> str:
+        """Calculate average time to resolution in dd:hh:mm format."""
+        if 'resolution_time' not in self.column_mapping:
+            return 'N/A'
+        
+        resolution_col = self.column_mapping['resolution_time']
+        resolution_times = []
+        
+        for _, row in self.data.iterrows():
+            resolution_time_str = clean_text(str(row.get(resolution_col, '')))
+            
+            if resolution_time_str and resolution_time_str != 'N/A':
+                # Parse different time formats (e.g., "12d 3h 33m", "134d 19h 21m")
+                total_minutes = self._parse_resolution_time(resolution_time_str)
+                if total_minutes > 0:
+                    resolution_times.append(total_minutes)
+        
+        if not resolution_times:
+            return 'N/A'
+        
+        # Calculate average in minutes
+        avg_minutes = sum(resolution_times) / len(resolution_times)
+        
+        # Convert to dd:hh:mm format
+        days = int(avg_minutes // (24 * 60))
+        hours = int((avg_minutes % (24 * 60)) // 60)
+        minutes = int(avg_minutes % 60)
+        
+        return f"{days:02d}d:{hours:02d}h:{minutes:02d}m"
+
+    def _parse_resolution_time(self, time_str: str) -> float:
+        """Parse resolution time string to total minutes."""
+        time_str = time_str.lower().strip()
+        total_minutes = 0
+        
+        # Parse patterns like "12d 3h 33m" or "134d 19h 21m"
+        import re
+        
+        # Extract days
+        days_match = re.search(r'(\d+)d', time_str)
+        if days_match:
+            total_minutes += int(days_match.group(1)) * 24 * 60
+        
+        # Extract hours
+        hours_match = re.search(r'(\d+)h', time_str)
+        if hours_match:
+            total_minutes += int(hours_match.group(1)) * 60
+        
+        # Extract minutes
+        minutes_match = re.search(r'(\d+)m', time_str)
+        if minutes_match:
+            total_minutes += int(minutes_match.group(1))
+        
+        return total_minutes
