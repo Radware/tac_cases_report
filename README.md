@@ -185,6 +185,8 @@ The generated reports include:
 
 ## Version control
 
+V0.2.6 
+    Cosmetics - cleaned Case distibution by Severity chart - renamed categories instead of 1- Critical, 2- High to Critical, High etc.
 V0.2.5 
     Added Case Escalation Distribution chart
     Added TopN and TTR as Key Performance Metrics

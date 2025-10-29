@@ -427,16 +427,20 @@ class TACVisualizer:
             
             for severity in severity_order:
                 if severity in counts:
-                    sorted_severities.append(severity)
+                    # Clean the label: remove the number prefix (e.g., "1 - Critical" -> "Critical")
+                    clean_label = severity.split(' - ', 1)[1] if ' - ' in severity else severity
+                    sorted_severities.append(clean_label)
                     sorted_values.append(counts[severity])
             
             # Add any remaining severities not in standard order
             for severity, count in counts.items():
                 if severity not in severity_order:
-                    sorted_severities.append(severity)
+                    # Clean the label for any additional severities too
+                    clean_label = severity.split(' - ', 1)[1] if ' - ' in severity else severity
+                    sorted_severities.append(clean_label)
                     sorted_values.append(count)
             
-            # Color mapping for severities (use configurable colors)
+            # Color mapping for severities (use configurable colors with clean labels)
             severity_colors = self.color_assignments.get('severity_colors', {})
             
             colors = [severity_colors.get(sev, self.chart_colors[i % len(self.chart_colors)]) 

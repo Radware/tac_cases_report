@@ -89,21 +89,19 @@ CHART_COLOR_ASSIGNMENTS = {
     # Severity colors (override automatic colors for severity levels)
 
     # Severity colors option - Original vibrant colors
-
     # 'severity_colors': {
-    #     '1 - Critical': '#dc3545',    # Red
-    #     '2 - High': '#ff6b35',        # Orange
-    #     '3 - Medium': '#ffc107',      # Yellow
-    #     '4 - Low': '#28a745',         # Green
+    #     'Critical': '#dc3545',    # Red
+    #     'High': '#ff6b35',        # Orange
+    #     'Medium': '#ffc107',      # Yellow
+    #     'Low': '#28a745',         # Green
     # },
 
-    # Severity colors option - all Dark Blue
-
+    # Severity colors option - all Dark Blue (alternative option)
     # 'severity_colors': {
-    #     '1 - Critical': '#003f7f',    # Dark Blue
-    #     '2 - High': '#003f7f',        # Dark Blue
-    #     '3 - Medium': '#003f7f',      # Dark Blue
-    #     '4 - Low': '#003f7f',         # Dark Blue
+    #     'Critical': '#003f7f',    # Dark Blue
+    #     'High': '#003f7f',        # Dark Blue
+    #     'Medium': '#003f7f',      # Dark Blue
+    #     'Low': '#003f7f',         # Dark Blue
     # },
     
     # Bug analysis specific colors
@@ -121,6 +119,8 @@ CHART_COLOR_ASSIGNMENTS = {
     # 'case_owner_assignment_colors': {
     #     'primary': '#003f7f'   # Dark Blue for case owner assignment bars
     # },
+
+
 
     # Status distribution colors (optional: override automatic colors for specific status values)
     # Option 1: Use a different color palette for all status values
@@ -157,6 +157,8 @@ CHART_COLOR_ASSIGNMENTS = {
     # Option: Use a different color palette for escalation
     # 'escalation_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
 
+
+
     # Category colors (optional: override automatic colors for category values)
     # 'category_colors': {
     #     'Upgrade/Downgrade/Install': '#28a745',     # Green for maintenance activities
@@ -167,6 +169,8 @@ CHART_COLOR_ASSIGNMENTS = {
 
     # Option: Use a different color palette for category
     # 'category_color_palette': 'vibrant_corporate',  # Use this palette instead of ACTIVE_COLOR_PALETTE
+
+
 
     # Resolution colors (optional: override automatic colors for resolution types)
     # 'resolution_colors': {
@@ -184,35 +188,7 @@ CHART_COLOR_ASSIGNMENTS = {
 }
 
 
-# ============================================================================
-# PDF-SPECIFIC CONFIGURATION - USER CUSTOMIZABLE
-# ============================================================================
-# Special configurations for PDF reports to ensure charts fit properly on pages
-# NOTE: PDF generation requires Playwright to render JavaScript-based Plotly charts
 
-# PDF Chart dimensions (smaller than HTML to fit better on PDF pages)
-PDF_CHART_DIMENSIONS = {
-    'standard_chart': {
-        'width': 550,   # Reduced from 900 to fit PDF page width
-        'height': 400   # Reduced from 600 to fit better vertically
-    },
-    'bug_analysis_chart': {
-        'width': 500,   # Even smaller for side-by-side layout
-        'height': 450   # Increased height to properly accommodate two pie charts side by side
-    },
-    'bar_chart': {
-        'width': 550,   # Good width for bar charts
-        'height': 350   # Shorter height to prevent cutting
-    }
-}
-
-# PDF Page layout settings
-PDF_LAYOUT_SETTINGS = {
-    'use_compact_bug_analysis': True,  # Show both bug charts side by side
-    'chart_margins': {
-        'l': 30, 'r': 30, 't': 80, 'b': 60  # Smaller margins for PDF
-    }
-}
 
 # ============================================================================
 # CHART TYPE CONFIGURATION - USER CUSTOMIZABLE
@@ -330,7 +306,43 @@ CHART_LAYOUT = {
 
 CHART_PLOTLYJS_MODE = 'cdn'  # Options: 'cdn', 'inline', 'directory'
 
+
+
+# ============================================================================
+# PDF-SPECIFIC CONFIGURATION - USER CUSTOMIZABLE
+# ============================================================================
+# Special configurations for PDF reports to ensure charts fit properly on pages
+# NOTE: PDF generation requires Playwright to render JavaScript-based Plotly charts
+
+# PDF Chart dimensions (smaller than HTML to fit better on PDF pages)
+PDF_CHART_DIMENSIONS = {
+    'standard_chart': {
+        'width': 550,   # Reduced from 900 to fit PDF page width
+        'height': 400   # Reduced from 600 to fit better vertically
+    },
+    'bug_analysis_chart': {
+        'width': 500,   # Even smaller for side-by-side layout
+        'height': 450   # Increased height to properly accommodate two pie charts side by side
+    },
+    'bar_chart': {
+        'width': 550,   # Good width for bar charts
+        'height': 350   # Shorter height to prevent cutting
+    }
+}
+
+# PDF Page layout settings
+PDF_LAYOUT_SETTINGS = {
+    'use_compact_bug_analysis': True,  # Show both bug charts side by side
+    'chart_margins': {
+        'l': 30, 'r': 30, 't': 80, 'b': 60  # Smaller margins for PDF
+    }
+}
+
+# ============================================================================
+# REPORT CSS STYLING - USER CUSTOMIZABLE
+# ============================================================================
 # Report CSS styling
+
 REPORT_CSS = """
 <style>
 /* TAC Executive Report Styling */
