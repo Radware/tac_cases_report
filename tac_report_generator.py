@@ -337,6 +337,7 @@ class TACReportGenerator:
                         <thead>
                             <tr>
                                 <th>Case Number</th>
+                                <th>End Customer</th>
                                 <th>TAC Case Subject</th>
                                 <th>Status</th>
                                 <th>Product</th>
@@ -350,6 +351,7 @@ class TACReportGenerator:
             # Add rows for each bug case
             for case in bug_cases_details:
                 case_number = str(case.get('case_number', 'N/A'))
+                end_customer = str(case.get('end_customer', 'N/A'))
                 subject = str(case.get('subject', 'N/A'))
                 status = str(case.get('status', 'N/A'))
                 product = str(case.get('product', 'N/A'))
@@ -363,6 +365,7 @@ class TACReportGenerator:
                 table_html += f"""
                             <tr>
                                 <td>{case_number}</td>
+                                <td>{end_customer}</td>
                                 <td title="{str(case.get('subject', 'N/A'))}">{subject}</td>
                                 <td>{status}</td>
                                 <td>{product}</td>

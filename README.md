@@ -185,6 +185,11 @@ The generated reports include:
 
 ## Version control
 
+V0.2.7 
+    Enhanced bugs identification. Now bug detection checks two columns "Experienced bug" and "Jira bug".
+    Enhanced the logic of bug type identification by product
+    Added End Customer to Bug Cases Details
+
 V0.2.6 
     Cosmetics - cleaned Case distibution by Severity chart - renamed categories instead of 1- Critical, 2- High to Critical, High etc.
 V0.2.5 
