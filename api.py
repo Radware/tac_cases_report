@@ -50,8 +50,8 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 # Create a persistent reports directory
-# Use /app/reports for Docker, or reports/ for local development
-REPORTS_DIR = Path(os.getenv('REPORTS_DIR', '/app/reports'))
+# Use environment variable or default to ./reports for flexibility
+REPORTS_DIR = Path(os.getenv('REPORTS_DIR', 'reports'))
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed file extensions
