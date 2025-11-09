@@ -489,34 +489,69 @@ class TACDataProcessor:
             'bug_cases_details': []
         }
         
-        if 'experienced_bug' not in self.column_mapping:
-            return {**analysis, 'reason': 'No experienced bug column found'}
+        # Check if at least one bug column is available
+        has_experienced_bug = 'experienced_bug' in self.column_mapping
+        has_jira_bug = 'jira_bug' in self.column_mapping
         
-        bug_col = self.column_mapping['experienced_bug']
+        if not has_experienced_bug and not has_jira_bug:
+            return {**analysis, 'reason': 'No bug columns found (Experienced Bug or Jira Bug)'}
+        
+        experienced_bug_col = self.column_mapping.get('experienced_bug')
+        jira_bug_col = self.column_mapping.get('jira_bug')
+        
         bug_cases = 0
         non_bug_cases = 0
         bug_types = defaultdict(int)
         bug_cases_details = []
         
         for _, row in self.data.iterrows():
-            bug_value = clean_text(str(row.get(bug_col, '')))
+            # Get values from both columns
+            experienced_bug_value = clean_text(str(row.get(experienced_bug_col, ''))) if experienced_bug_col else ''
+            jira_bug_value = clean_text(str(row.get(jira_bug_col, ''))) if jira_bug_col else ''
             
-            # Determine if it's a bug case
-            if self._is_bug_case(bug_value):
+            # Check if either column indicates a bug (combined check, no double counting)
+            is_bug_experienced = self._is_bug_case(experienced_bug_value)
+            is_bug_jira = self._is_jira_bug_case(jira_bug_value)
+            
+            if is_bug_experienced or is_bug_jira:
                 bug_cases += 1
-                # Extract bug type (AL-, CYCON-, etc.)
-                bug_type = self._extract_bug_type(bug_value)
+                
+                # Extract bug type - prefer Product Hierarchy column, fallback to bug prefix extraction
+                bug_type = None
+                
+                # First try: Get from Product Hierarchy column (most accurate)
+                if 'product_hierarchy' in self.column_mapping:
+                    product_hierarchy = clean_text(str(row.get(self.column_mapping['product_hierarchy'], '')))
+                    if product_hierarchy and product_hierarchy != 'N/A':
+                        bug_type = product_hierarchy
+                
+                # Second try: Extract from bug ID prefixes if Product Hierarchy not available
+                if not bug_type:
+                    if is_bug_experienced:
+                        bug_type = self._extract_bug_type(experienced_bug_value)
+                    if not bug_type and is_bug_jira:
+                        bug_type = self._extract_bug_type(jira_bug_value)
+                
                 if bug_type:
                     bug_types[bug_type] += 1
+                
+                # Combine bug IDs for display (show both if both present)
+                bug_id_display = []
+                if is_bug_experienced:
+                    bug_id_display.append(experienced_bug_value)
+                if is_bug_jira:
+                    bug_id_display.append(jira_bug_value)
+                bug_id_combined = ' | '.join(bug_id_display)
                 
                 # Collect bug case details for table
                 bug_case_detail = {
                     'case_number': row.get(self.column_mapping.get('reference', ''), 'N/A'),
+                    'end_customer': row.get(self.column_mapping.get('end_customer', ''), 'N/A'),
                     'subject': row.get(self.column_mapping.get('subject', ''), 'N/A'),
                     'status': row.get(self.column_mapping.get('status', ''), 'N/A'),
                     'product': row.get(self.column_mapping.get('product_hierarchy', ''), 'N/A'),
                     'product_version': row.get(self.column_mapping.get('product_version', ''), 'N/A'),
-                    'bug_id': bug_value
+                    'bug_id': bug_id_combined
                 }
                 bug_cases_details.append(bug_case_detail)
             else:
@@ -526,7 +561,16 @@ class TACDataProcessor:
         bug_severity = {}
         if 'severity' in self.column_mapping:
             severity_col = self.column_mapping['severity']
-            bug_data = self.data[self.data[bug_col].apply(lambda x: self._is_bug_case(clean_text(str(x))))]
+            # Filter rows where either column indicates a bug
+            bug_mask = self.data.apply(
+                lambda row: (
+                    self._is_bug_case(clean_text(str(row.get(experienced_bug_col, '')))) if experienced_bug_col else False
+                ) or (
+                    self._is_jira_bug_case(clean_text(str(row.get(jira_bug_col, '')))) if jira_bug_col else False
+                ),
+                axis=1
+            )
+            bug_data = self.data[bug_mask]
             bug_severity = bug_data[severity_col].value_counts().to_dict()
         
         return {
@@ -542,17 +586,58 @@ class TACDataProcessor:
         }
     
     def _is_bug_case(self, bug_value: str) -> bool:
-        """Determine if a case is bug-related."""
-        if not bug_value or bug_value.lower() in ['n/a', 'no value', 'none', '']:
+        """
+        Determine if a case is bug-related based on Experienced Bug column.
+        
+        Args:
+            bug_value: Value from Experienced Bug column
+            
+        Returns:
+            True if value indicates a bug (any value other than no-value indicators)
+        """
+        if not bug_value:
             return False
         
-        # Check for bug ID patterns
-        bug_patterns = [r'AL-\d+', r'CYCON-\d+', r'BUG-\d+', r'DEF-\d+']
-        for pattern in bug_patterns:
-            if re.search(pattern, bug_value, re.IGNORECASE):
-                return True
+        bug_value_lower = bug_value.lower().strip()
         
-        return False
+        # List of values that indicate NO bug
+        no_bug_indicators = ['n/a', 'na', 'wad', 'no value', 'none','-' '']
+        
+        # If value is in no-bug list, it's not a bug
+        if bug_value_lower in no_bug_indicators:
+            return False
+        
+        # Any other value indicates a bug
+        return True
+    
+    def _is_jira_bug_case(self, jira_bug_value: str) -> bool:
+        """
+        Determine if a case is bug-related based on Jira Bug column.
+        
+        Args:
+            jira_bug_value: Value from Jira Bug column
+            
+        Returns:
+            True if value indicates a bug (not "No Value" and doesn't start with "prod")
+        """
+        if not jira_bug_value:
+            return False
+        
+        jira_bug_lower = jira_bug_value.lower().strip()
+        
+        # List of values that indicate NO bug
+        no_bug_indicators = ['n/a', 'na', 'no value', 'none', '']
+        
+        # If value is in no-bug list, it's not a bug
+        if jira_bug_lower in no_bug_indicators:
+            return False
+        
+        # If value starts with "prod" (case-insensitive), it's not a bug
+        if jira_bug_lower.startswith('prod'):
+            return False
+        
+        # Any other value indicates a bug
+        return True
     
     def _extract_bug_type(self, bug_value: str) -> Optional[str]:
         """Extract bug type prefix from bug value."""
@@ -566,7 +651,13 @@ class TACDataProcessor:
             return 'CyberController'
         elif bug_value.upper().startswith('DP-'):
             return 'DefensePro'
-        elif any(prefix in bug_value.upper() for prefix in ['BUG-', 'DEF-']):
+        elif bug_value.upper().startswith('AW-'):
+            return 'AppWall'
+        elif bug_value.upper().startswith('VISION-'):
+            return 'APSolute Vision'
+        elif bug_value.upper().startswith('BOTMAN-'):
+            return 'BOT Manager'
+        elif any(prefix in bug_value.upper() for prefix in ['DE']):
             return 'General'
         
         return 'Other'

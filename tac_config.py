@@ -216,10 +216,10 @@ CHART_TYPES = {
     'bug_analysis': 'pie',
     'internal_external': 'pie',
     'queue_distribution': 'pie',
-    'status_distribution': 'pie',
+    'status_distribution': 'horizontal_bar',
     'escalation': 'pie',
-    'category': 'pie',
-    'resolution': 'pie',
+    'category': 'horizontal_bar',
+    'resolution': 'horizontal_bar',
 
     # Assignment charts (for ranking/comparison data)
     # Options: 'bar', 'horizontal_bar'
@@ -646,32 +646,37 @@ body {
 
 .bug-cases-table th:first-child,
 .bug-cases-table td:first-child {
-    width: 12%;
+    width: 10%;
 }
 
 .bug-cases-table th:nth-child(2),
 .bug-cases-table td:nth-child(2) {
-    width: 35%;
+    width: 15%;
 }
 
 .bug-cases-table th:nth-child(3),
 .bug-cases-table td:nth-child(3) {
-    width: 10%;
+    width: 30%;
 }
 
 .bug-cases-table th:nth-child(4),
 .bug-cases-table td:nth-child(4) {
-    width: 15%;
+    width: 10%;
 }
 
 .bug-cases-table th:nth-child(5),
 .bug-cases-table td:nth-child(5) {
-    width: 13%;
+    width: 12%;
 }
 
 .bug-cases-table th:nth-child(6),
 .bug-cases-table td:nth-child(6) {
-    width: 15%;
+    width: 10%;
+}
+
+.bug-cases-table th:nth-child(7),
+.bug-cases-table td:nth-child(7) {
+    width: 13%;
 }
 
 /* Footer */

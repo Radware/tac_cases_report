@@ -340,6 +340,9 @@ class TACVisualizer:
                 yaxis_title='Category',
                 xaxis=dict(rangemode='tozero')
             )
+            
+            # Reverse y-axis to show highest at top
+            fig.update_yaxes(autorange="reversed")
         
         # Enhanced layout configuration
         if chart_type in ['pie', 'donut']:
@@ -699,10 +702,6 @@ class TACVisualizer:
                 title='Cases by Product Hierarchy',
                 div_id='product_hierarchy_chart'
             )
-            
-            # For horizontal bar charts, reverse y-axis to show highest at top
-            if chart_type == 'horizontal_bar':
-                fig.update_yaxes(autorange="reversed")
             
             return fig.to_html(
                 include_plotlyjs=CHART_PLOTLYJS_MODE,
